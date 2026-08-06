@@ -1,5 +1,4 @@
 ---
-keywords: deploy, downtime, rollout, migrations, blue-green
 ---
 
 Placeholder — an example belief. Delete it, or rewrite it as one of

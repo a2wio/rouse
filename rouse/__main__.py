@@ -51,6 +51,9 @@ def main(argv=None) -> int:
     p = sub.add_parser("pack", help="the context block for session start",
                        parents=[common])
     p.add_argument("--budget-ms", type=int, default=probes.BUDGET_MS)
+    p.add_argument("--query", help="what this turn is about, if you know — "
+                                   "motivations it doesn't touch collapse to "
+                                   "one line each. Beliefs always go in whole")
 
     sub.add_parser("due", help="what the clock would wake about",
                    parents=[common])
@@ -148,7 +151,8 @@ def cmd_init(args) -> int:
 
 
 def cmd_pack(args) -> int:
-    sys.stdout.write(pack.render(args.memory, budget_ms=args.budget_ms))
+    sys.stdout.write(pack.render(args.memory, budget_ms=args.budget_ms,
+                                 query=args.query))
     return 0
 
 
@@ -275,6 +279,12 @@ def _context(memory: Path) -> list[str]:
                 warnings.append(f"{where}: {', '.join(late)} in a {type_} — "
                                 "context has no clock and no lifecycle. If "
                                 "this one does, it wanted to be an intention")
+            if type_ not in context.GATED and head.get("keywords"):
+                warnings.append(
+                    f"{where}: keywords on a {type_} — nothing reads them. "
+                    "It goes into the pack whole on every turn, so it is "
+                    "never looked up; keywords are for what gets retrieved, "
+                    "which is notes and motivations under `pack --query`")
     size = sum(len(m.text()) for m in context.layers(memory))
     if size > CONTEXT_BUDGET:
         warnings.append(f"{layout.ENTRYPOINT}: {size} characters of beliefs "

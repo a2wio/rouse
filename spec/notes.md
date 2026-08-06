@@ -39,10 +39,15 @@ So keywords are not tags for tidiness, they are the only handle future
 sessions have on a file they can't afford to open. Write the words
 someone would grep for, including the ones not in the text: synonyms,
 error strings, the name of the person who asked, the ticket number.
-Twenty keywords on a file is normal and costs one line.
+Twenty keywords on a file is normal and costs one line — and it has to
+*be* one line, because the header has no continuations (`README.md`):
 
-    keywords: postgres, migrations, staging, rollback, make db-rollback,
-              destructive, schema, deploy
+    keywords: postgres, migrations, staging, rollback, destructive, schema
+
+The other file that carries them is a motivation, where the reader is
+`pack --query` rather than the index; see `pack.md`. Nothing else does.
+A belief has no keywords, because a file injected whole on every turn is
+never looked up.
 
 ## grouping
 

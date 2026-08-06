@@ -238,6 +238,85 @@ class Context(Tree):
                          ["belief/zero-downtime"])
 
 
+class Matching(Tree):
+    """`pack --query`: which motivations are spent in full.
+
+    The rule is deliberately stupid so that two implementations produce
+    the same pack from the same tree (spec/pack.md).
+    """
+
+    def motivation(self, slug: str, keywords: str | None = None,
+                   body: str = "a signal") -> context.Module:
+        header = {"keywords": keywords} if keywords is not None else {}
+        path = self.module("motivation", slug, body=body, header=header)
+        return context.Module("motivation", path,
+                              path.relative_to(self.memory))
+
+    def test_terms_are_lowercased_and_split_on_everything_but_hyphens(self):
+        self.assertEqual(context.terms("Deploy the ZERO-downtime thing!"),
+                         {"deploy", "the", "zero-downtime", "thing"})
+
+    def test_one_shared_term_is_a_match(self):
+        module = self.motivation("broke-prod", "deploy, prod, incident")
+        self.assertTrue(module.matches(context.terms("the prod rollout")))
+
+    def test_no_shared_term_is_not(self):
+        module = self.motivation("broke-prod", "deploy, prod, incident")
+        self.assertFalse(module.matches(context.terms("the invoice is late")))
+
+    def test_nothing_is_stemmed_and_that_is_on_purpose(self):
+        """A matcher with opinions is a matcher two implementations
+        disagree about. Missing one costs a collapsed line, not the file."""
+        module = self.motivation("broke-prod", "deploy")
+        self.assertFalse(module.matches(context.terms("two deploys broke it")))
+
+    def test_no_keywords_at_all_is_always_injected(self):
+        """An absent field is not a filter — there is nothing to gate on."""
+        module = self.motivation("bare")
+        self.assertTrue(module.matches(context.terms("anything at all")))
+
+    def test_with_a_query_the_unmatched_collapse_to_one_line(self):
+        self.motivation("broke-prod", "deploy, prod",
+                        body="Two deploys broke prod this month.")
+        self.motivation("invoice-unpaid", "invoice, billing",
+                        body="The invoice has been unpaid for six days.")
+        out = "\n".join(context.render(self.memory, query="the prod deploy"))
+        self.assertIn("Two deploys broke prod this month.", out)
+        self.assertNotIn("unpaid for six days", out)
+        self.assertIn("[invoice-unpaid] — 0s ago", out)
+
+    def test_nothing_ever_vanishes_from_the_pack_silently(self):
+        """A signal that disappeared is one nobody knows to go and read.
+        Cheap is the point; invisible is the failure."""
+        self.motivation("invoice-unpaid", "invoice", body="pay it")
+        out = "\n".join(context.render(self.memory, query="unrelated"))
+        self.assertIn("not matched by this turn", out)
+        self.assertIn(layout.MOTIVATIONS, out)
+        self.assertIn("[invoice-unpaid]", out)
+
+    def test_a_belief_is_never_gated_however_the_query_reads(self):
+        """A rule you didn't retrieve still binds. This is the one thing
+        in the pack a retrieval instinct gets wrong."""
+        self.module("belief", "plan-before-code",
+                    body="Writing code starts in plan mode.")
+        out = "\n".join(context.render(self.memory, query="the invoice"))
+        self.assertIn("Writing code starts in plan mode.", out)
+        self.assertNotIn("not matched", out)
+
+    def test_without_a_query_every_motivation_goes_in_whole(self):
+        self.motivation("broke-prod", "deploy", body="prod broke twice")
+        self.motivation("invoice-unpaid", "invoice", body="pay the invoice")
+        out = "\n".join(context.render(self.memory))
+        self.assertIn("prod broke twice", out)
+        self.assertIn("pay the invoice", out)
+        self.assertNotIn("not matched", out)
+
+    def test_an_empty_query_is_no_query(self):
+        self.motivation("invoice-unpaid", "invoice", body="pay the invoice")
+        self.assertIn("pay the invoice",
+                      "\n".join(context.render(self.memory, query="")))
+
+
 class Due(Tree):
     def test_an_intention_that_stopped_moving_is_due(self):
         self.rec(f"{LADDER}/a", "intention", {"status": "open",
@@ -523,6 +602,29 @@ class Pack(Tree):
         self.assertLess(out.index("intention/a"), out.index("beliefs —"))
         self.assertLess(out.index("beliefs —"), out.index("fresh memory"))
 
+    def test_a_query_thins_the_signals_and_leaves_the_rules_alone(self):
+        self.module("belief", "plan-before-code",
+                    body="Writing code starts in plan mode.")
+        self.module("motivation", "invoice-unpaid", body="pay the invoice",
+                    header={"keywords": "invoice, billing"})
+        self.module("motivation", "broke-prod", body="prod broke twice",
+                    header={"keywords": "deploy, prod"})
+        out = pack.render(self.memory, query="the prod deploy went wrong")
+        self.assertIn("Writing code starts in plan mode.", out)
+        self.assertIn("prod broke twice", out)
+        self.assertNotIn("pay the invoice", out)
+        self.assertIn("[invoice-unpaid]", out)
+
+    def test_the_cli_takes_the_query(self):
+        self.module("motivation", "invoice-unpaid", body="pay the invoice",
+                    header={"keywords": "invoice"})
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            cli.main(["pack", "--memory", str(self.memory),
+                      "--query", "the deploy"])
+        self.assertNotIn("pay the invoice", buf.getvalue())
+        self.assertIn("[invoice-unpaid]", buf.getvalue())
+
     def test_a_note_with_assets_is_indexed_by_its_directory(self):
         self.note("shipping/note.md", {"keywords": "shipping, ship"})
         (self.memory / layout.NOTES / "shipping" / "shot.png").write_bytes(b"x")
@@ -551,6 +653,20 @@ class Scaffold(Tree):
         path = scaffold.new(self.memory, "belief", "zero-downtime-deploys")
         self.assertEqual(path.parent, self.memory / layout.BELIEFS)
         self.assertEqual(path.name, "belief-zero-downtime-deploys.md")
+        self.assertEqual(list(files.head(path)), [])
+
+    def test_a_new_belief_has_an_empty_fence_and_nothing_in_it(self):
+        """Nothing in a belief's header is the writer's — the fence is
+        there so a wrapper can stamp `origin:` onto the one layer that
+        goes into every single turn."""
+        path = scaffold.new(self.memory, "belief", "plan-before-code")
+        self.assertTrue(path.read_text().startswith("---\n---\n"))
+        self.assertEqual(scaffold.blanks(path), [])
+        files.set_fields(path, origin="owner")
+        self.assertEqual(files.head(path)["origin"], "owner")
+
+    def test_new_writes_a_motivation_with_the_field_that_has_a_reader(self):
+        path = scaffold.new(self.memory, "motivation", "two-deploys-broke")
         self.assertEqual(list(files.head(path)), ["keywords"])
 
     def test_a_belief_cannot_be_put_under_anything(self):
@@ -645,6 +761,24 @@ class Check(Tree):
         code, out = self.check()
         self.assertEqual(code, 0)
         self.assertIn("context has no clock and no lifecycle", out)
+
+    def test_keywords_on_a_belief_are_flagged(self):
+        """The same family as a clock on a belief: a field whose only
+        reader retrieves things, on the one layer that is never
+        retrieved. Somebody expected their beliefs to be looked up."""
+        (self.memory / layout.PROBES).write_text("")
+        self.module("belief", "x", header={"keywords": "deploy, rollout"})
+        code, out = self.check()
+        self.assertEqual(code, 0)
+        self.assertIn("keywords on a belief — nothing reads them", out)
+
+    def test_keywords_on_a_motivation_are_not(self):
+        """Same field, one directory down, and there it has a reader."""
+        (self.memory / layout.PROBES).write_text("")
+        self.module("motivation", "x", header={"keywords": "deploy, prod"})
+        code, out = self.check()
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), "clean")
 
     def test_a_directory_under_beliefs_is_flagged(self):
         (self.memory / layout.PROBES).write_text("")
@@ -882,7 +1016,11 @@ class Skeleton(unittest.TestCase):
     def test_its_beliefs_are_flat_and_carry_no_clock(self):
         for module in context.layers(self.memory):
             self.assertEqual(module.path.parent.name, f"{module.type}s")
-            self.assertEqual(list(files.head(module.path) or {}), ["keywords"])
+            fields = list(files.head(module.path) or {})
+            # every field in here names something that reads it, and a
+            # belief is injected whole on every turn, so nothing does
+            self.assertEqual(fields, [] if module.type == "belief"
+                             else ["keywords"])
 
     def test_it_survives_its_own_linter(self):
         buf = io.StringIO()

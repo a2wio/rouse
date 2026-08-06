@@ -43,22 +43,33 @@ files inside them never do:
             2026-03-14-migration-verified/…
 
     ---
-    keywords: deploy, downtime, rollout, migrations
     ---
     Deployments always happen with no downtime. A rollout that needs a
     maintenance window is a rollout that went wrong earlier.
 
 **No status. No clock. No lifecycle.** Nothing sweeps one, nothing
 nudges about one, and there is no `done` for a thing that is simply
-true. The header is optional, `keywords:` is the only field anything
-reads, and it is there for grep rather than for a machine.
+true.
 
-**The pack injects all of them, whole, at the start of every session.**
-That is the entire mechanism. These files are a system prompt cut into
-modules, and modularity is the point: one fact per file means a rule can
-be added, dropped, reviewed, or handed to a second agent without editing
-a wall of prose, and it means the diff on a rule change is one line
-rather than a paragraph.
+**A belief's header holds nothing the writer types**, and that follows
+from the injection rather than being a separate rule: a file that is put
+in front of the model whole, on every turn, is never looked up, so there
+is nothing for an index to do. The fence is there empty so a wrapper can
+stamp `origin:` onto it (`provenance.md`) — the layer injected every
+session is the one where knowing who wrote it matters most.
+
+**A motivation carries `keywords:`, and they have a reader**: `pack
+--query` (`pack.md`). Same file, one directory down, one field more, and
+the field is there because a signal is worth spending context on when it
+is relevant and worth one line when it isn't.
+
+**The pack injects them at the start of every session** — every belief
+whole, always, and every motivation whole unless the caller said what
+the turn is about. That is the entire mechanism. These files are a
+system prompt cut into modules, and modularity is the point: one fact
+per file means a rule can be added, dropped, reviewed, or handed to a
+second agent without editing a wall of prose, and it means the diff on a
+rule change is one line rather than a paragraph.
 
 ### belief — internal and timeless
 

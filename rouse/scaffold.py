@@ -23,7 +23,10 @@ from . import context, files, layout, levels
 # what each level owes, in the order it reads best. `{now}` and `{day}`
 # are filled in; anything left blank is the writer's job.
 TEMPLATES: dict[str, tuple[list[tuple[str, str]], str]] = {
-    "belief": ([("keywords", "")],
+    # a belief owes nothing. The fence is there empty so a wrapper can
+    # stamp `origin:` onto the one kind of file that is injected whole on
+    # every turn — nothing in it is the writer's to fill in.
+    "belief": ([],
                "One ground truth about the world you work in, stated "
                "plainly and in the present tense.\n"),
     "motivation": ([("keywords", "")],
@@ -86,10 +89,10 @@ def _write(path: Path, type_: str) -> Path:
         raise ValueError(f"{path} already exists — not touching it")
     fields, body = TEMPLATES[type_]
     now, day = files.stamp(), files.stamp()[:10]
-    header = "\n".join(f"{k}: {v.format(now=now, day=day)}".rstrip()
-                       for k, v in fields)
+    header = "".join(f"{k}: {v.format(now=now, day=day)}".rstrip() + "\n"
+                     for k, v in fields)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(f"---\n{header}\n---\n\n{body}", encoding="utf-8")
+    path.write_text(f"---\n{header}---\n\n{body}", encoding="utf-8")
     return path
 
 

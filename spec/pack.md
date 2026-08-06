@@ -85,6 +85,8 @@ Label them as standing truth rather than news. A model handed a
 paragraph at the top of a session will otherwise treat it as something
 that just came in and reply to it.
 
+The one exception is the query, below — and it never touches a belief.
+
 **5. The memory index.** Recently-touched files listed with their
 keywords; everything older collapsed to name, age, keywords, origin.
 The model chooses what to open. This is retrieval by table of contents,
@@ -95,6 +97,74 @@ the same reader that later needs them.
 reach it. Never let the pack imply it is complete — an agent that thinks
 the pack is the memory will never grep, and grep is most of the
 retrieval.
+
+## the query — beliefs always, motivations when they're about this
+
+A caller that knows what the turn is about may say so:
+
+    rouse pack --query "the staging migration keeps failing on deploy"
+
+**A belief is never affected by it.** Not thinned, not collapsed, not
+reordered. The asymmetry is the whole point and it is one sentence: **a
+rule you didn't retrieve still binds, and a signal only matters when
+it's relevant.** An agent that fails to recall "writing code starts in
+plan mode" does not thereby stop being expected to plan — the rule was
+never a lookup, it was the instructions. Gating a belief on a keyword
+match is how you build an agent that follows its own conventions
+whenever they happen to be mentioned.
+
+A motivation is the other case exactly. It is a signal that arrived from
+outside, it is about something, and something is what it is about.
+
+**With a query, a motivation whose keywords the query touches goes in
+whole; the rest collapse to one line each** — slug and age, nothing
+else:
+
+    motivations — signals that arrived — standing context, not news:
+      [two-deploys-broke-prod]
+      Two deploys broke prod this month and the operator said they no
+      longer trust a green check on this pipeline.
+
+      not matched by this turn — whole in
+      entrypoint/beliefs/motivations/:
+        [invoice-still-unpaid] — 6d ago
+        [runner-flaked-twice] — 2d ago
+
+**Never drop one silently.** A motivation that vanished from the pack is
+a signal nobody knows exists, which is worse than one that cost forty
+tokens — the line is the difference between cheap and invisible, and the
+same rule as (6).
+
+**Without a query every motivation goes in whole**, which is the
+behaviour to implement first and the one to fall back to. `--query` is
+an optimisation on a block that was already affordable; a wrapper with
+nothing sensible to put in it should pass nothing.
+
+### the matching rule, exactly
+
+Two implementations must produce the same pack from the same tree, so
+this is specified to the character and is deliberately stupid:
+
+1. **Terms.** Lowercase the query, split on any run of characters that
+   is not a letter, a digit or a hyphen, discard empties. Hyphens
+   survive: `zero-downtime` is one term.
+2. **Keywords.** Split the motivation's `keywords:` on commas, strip,
+   lowercase.
+3. **Match.** The two sets intersect. That is all.
+
+No stemming, no plurals, no synonyms, no substrings, no scoring, no
+ranking, no cutoff. `deploys` does not match `deploy` and it is not
+supposed to — a matcher with opinions is a matcher two implementations
+disagree about, and the failure mode of missing one is a collapsed line
+the agent can still see and open.
+
+**A motivation with no keywords at all is always injected whole.** There
+is nothing to gate on, and an absent field is not a filter. This is also
+why `keywords:` on a motivation is worth writing and never required.
+
+**`keywords:` on a belief is a lint warning** (`ladder.md`). It is the
+misunderstanding this section exists to prevent, written into a file:
+somebody expected their beliefs to be retrieved.
 
 ## ages, not timestamps
 
@@ -127,6 +197,9 @@ here will remind the model to go and read them.
   goes stale inside the context window. The context layers are the only
   bodies in here, and they are the only bodies that cannot go stale
   mid-session.
+- **Never gate a belief on a query.** Whatever `--query` says, every
+  belief goes in whole. See above; it is the one thing in here a
+  retrieval instinct will get wrong.
 - **Never let the context layers grow unbounded.** They are paid for on
   every turn forever. Past a couple of thousand tokens, warn — "keep
   them few" is a rule with a number behind it.

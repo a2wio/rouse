@@ -119,6 +119,12 @@ clock, sampled at session boundaries.
 
     python3 -m rouse pack >> .agent/context.md            # ./memory or ~/.rouse
     ROUSE_HOME=~/.rouse-oncall python3 -m rouse pack      # a named agent's
+    python3 -m rouse pack --query "$PROMPT"               # thin the signals
+
+`--query` is optional and only ever touches the motivations: the ones it
+doesn't match shrink to a line, and every belief still goes in whole. A
+rule you didn't retrieve still binds; a signal only matters when it's
+about what you're doing.
 
 **Tier 2 — `rouse sweep`.** Ticks every minute and delivers a wake the
 moment something comes due, to a file, a command, or a webhook. Only this

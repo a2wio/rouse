@@ -132,15 +132,16 @@ back to what you remembered.
     entrypoint/beliefs/belief-zero-downtime-deploys.md
 
     ---
-    keywords: deploy, downtime, rollout, migrations
     ---
     Deployments always happen with no downtime. A rollout that needs a
     maintenance window is a rollout that went wrong earlier.
 
-That is the entire format. No `status:`, no `stale-after:`, nothing that
-ticks — if you find yourself wanting one of those, what you wanted was
-an intention. The header is optional and `keywords:` is the only thing
-in it, for grep.
+That is the entire format: the body, and a header with nothing of yours
+in it. No `status:`, no `stale-after:`, nothing that ticks — if you find
+yourself wanting one of those, what you wanted was an intention. And no
+`keywords:` either: this file is put in front of you whole, every single
+turn, so nothing ever goes looking for it. Keywords are for the things
+that get retrieved.
 
 **A belief is yours and it is timeless.** Write one when a rule turns
 out to hold generally: not "the staging deploy broke on Tuesday" (that
@@ -151,11 +152,28 @@ can be dropped or handed to another agent on its own.
 
 **A motivation is a signal, and it came from outside you.** Somebody
 said something; a number crossed a line; it has been eleven days without
-the thing that should happen weekly. Same file format, one directory
-down, and it is the reason there is anything to do at all — an intention
-is your answer to one. The test: could this have been true before anyone
-said anything? Then it's a belief. Did it *arrive*? Then it's a
-motivation, and you delete it when it stops being what's pushing.
+the thing that should happen weekly. One directory down, and it is the
+reason there is anything to do at all — an intention is your answer to
+one. The test: could this have been true before anyone said anything?
+Then it's a belief. Did it *arrive*? Then it's a motivation, and you
+delete it when it stops being what's pushing.
+
+    entrypoint/beliefs/motivations/motivation-two-deploys-broke-prod.md
+
+    ---
+    keywords: deploy, prod, incident, trust, pipeline
+    ---
+    Two deploys broke prod this month and the operator said they no
+    longer trust a green check on this pipeline.
+
+**This is the one place `keywords:` belongs in here besides a note**, and
+it is there because something reads it. Whatever starts your session may
+say what the turn is about, and then the motivations it doesn't touch
+shrink to one line — slug and age — instead of being spent in full. They
+are still on disk and the line says so; open one when it looks relevant.
+A belief is never thinned that way, and the asymmetry is the difference
+between the two: a rule binds whether or not you went and got it, and a
+signal only matters when it is about what you are doing.
 
 ## intentions — you can't quietly drop one
 

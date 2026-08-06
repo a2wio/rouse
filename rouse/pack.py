@@ -12,6 +12,10 @@ note contents is a second, worse copy of the memory that goes stale
 inside the window. Beliefs and motivations have no clock and no
 lifecycle, so there is no version of one that can go stale mid-session.
 
+Of those two, only the motivations may be thinned by `--query`. A belief
+you failed to retrieve still binds; a signal only matters when it is
+relevant to what you are doing.
+
 Without a daemon, the `due:` block below IS the clock: overdue records
 surface at the top of every session instead of never.
 """
@@ -26,7 +30,9 @@ MAX_OLDER = 60           # lines before the older list is truncated
 
 
 def render(memory: Path, *, budget_ms: int = probes.BUDGET_MS,
-           now: float | None = None) -> str:
+           now: float | None = None, query: str | None = None) -> str:
+    """The block. `query` is what the turn is about, if the caller knows
+    it — it only ever thins the motivations, never the beliefs."""
     memory = Path(memory)
     now = time.time() if now is None else now
     records = levels.Records(memory)
@@ -39,7 +45,8 @@ def render(memory: Path, *, budget_ms: int = probes.BUDGET_MS,
         out += [f"  {name}: {value}" for name, value in readings]
         out.append("")
 
-    out += (_due(records, now) + context.render(memory)
+    out += (_due(records, now)
+            + context.render(memory, query=query, now=now)
             + _ladder(records) + _notes(memory, now))
     if records.broken:
         out.append("")

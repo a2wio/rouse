@@ -74,6 +74,15 @@ index needs is in the header. Bodies are for the model. No implementation
 may need to read a body to decide anything, which is what keeps a sweep
 over a thousand records cheap.
 
+**A field exists only where something reads it.** Every field in here
+names its reader — `stale-after` is read by the sweep, `keywords` by the
+index and by `pack --query`, `origin` by the pack's own rendering. A
+field carried by a kind of file that has no reader for it is worse than
+clutter: somebody fills it in, and then believes the thing it implies.
+`keywords:` on a belief was exactly that — a belief is injected whole on
+every turn and is never looked up, so the field said "these get
+retrieved" about the one layer that never is. It is a lint warning now.
+
 **The header is a subset of YAML on purpose.** `key: value`, one line
 each, no nesting, no lists, no anchors. A parser for it is thirty lines
 of stdlib, so nobody has to install anything to read a memory file, and
@@ -111,7 +120,8 @@ Five things, and nothing else is required:
    can't be pointed at; see `home.md`.
 1. **Inject the context layers.** Every file in `beliefs/` and
    `motivations/`, whole, at the top of every session. They are the only
-   bodies that belong in a pack.
+   bodies that belong in a pack. Thinning the motivations by relevance
+   is optional (`pack.md`); thinning the beliefs is never allowed.
 2. **Walk and parse.** Find every `<type>.md`, read the header subset
    above, and take each record's parent to be the nearest enclosing
    *record* directory. `beliefs/`, `motivations/` and `intentions/` are

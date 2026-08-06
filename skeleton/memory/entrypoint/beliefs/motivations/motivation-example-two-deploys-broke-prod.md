@@ -1,5 +1,5 @@
 ---
-keywords: deploy, prod, incident, trust, signal, staging, pressure
+keywords: deploy, prod, incident, trust, signal, staging, pressure, example
 ---
 
 Placeholder — an example motivation, which is a signal from outside
@@ -15,3 +15,8 @@ belief, one directory up, and it would still be true next quarter.
 one. It says so here, in words, because nothing in the filesystem links
 the two and nothing should: the intention will close, and this will sit
 here until the signal stops mattering, and then it is deleted.
+
+The `keywords:` above are the one header field a motivation has and a
+belief doesn't, and something reads them: when the pack is given what
+the turn is about, motivations it doesn't touch shrink to one line
+instead of being spent in full. A belief is never thinned that way.

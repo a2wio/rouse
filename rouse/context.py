@@ -26,13 +26,32 @@ agent's own answer to one.
 and nothing more. No motivation belongs to a belief, no intention
 belongs to a motivation, and neither relationship is in the filesystem —
 if you want the connection recorded, write the sentence in the body.
+
+The difference shows up again in the header. A belief has none worth
+writing: it is injected whole on every turn, so nothing ever looks one
+up, and a field nothing reads is a field that will be filled in wrong. A
+motivation carries `keywords:`, and what reads them is `pack --query` —
+a signal only matters when it is relevant, and a rule binds whether you
+retrieved it or not.
 """
 
+import re
+import time
 from pathlib import Path
 
 from . import files, layout
 
 HOMES = {"belief": layout.BELIEFS, "motivation": layout.MOTIVATIONS}
+
+# the layers that `pack --query` may collapse. Beliefs are not in it and
+# must not be: a rule you failed to retrieve still binds, so gating one
+# on a keyword match is how an agent forgets it plans before it codes.
+GATED = ("motivation",)
+
+# anything that isn't a letter, a digit or a hyphen splits a query into
+# terms. Hyphens stay because the keywords have them — `zero-downtime`
+# is one word here, not two.
+SPLIT = re.compile(r"[^a-z0-9-]+")
 
 # how each layer announces itself in the pack. Both end the same way and
 # have to: a paragraph at the top of a session reads as something that
@@ -71,8 +90,34 @@ class Module:
         and it is why the header stays minimal."""
         return files.body(self.path).strip()
 
+    def keywords(self) -> set[str]:
+        """What `pack --query` matches against, on a motivation. Empty on
+        a belief, and the linter says so if one grows them."""
+        raw = (files.head(self.path) or {}).get("keywords") or ""
+        return {word.strip().lower() for word in raw.split(",") if word.strip()}
+
+    def matches(self, terms: set[str]) -> bool:
+        """Whether this one is injected whole for a query.
+
+        Term overlap, and nothing else — no stemming, no scoring, no
+        synonyms. A module with no keywords at all has nothing to gate
+        on, so it always goes in: an absent field is not a filter.
+        """
+        words = self.keywords()
+        return not words or bool(words & terms)
+
     def __repr__(self) -> str:
         return f"<{self.id}>"
+
+
+def terms(query: str) -> set[str]:
+    """A query, cut into terms: lowercase, split, deduplicated.
+
+    Deliberately dumb, because a second implementation has to produce the
+    same pack from the same tree (spec/pack.md). Anything cleverer is a
+    thing two implementations would disagree about.
+    """
+    return {term for term in SPLIT.split(query.lower()) if term}
 
 
 def read(memory: Path, type_: str) -> list[Module]:
@@ -92,24 +137,43 @@ def layers(memory: Path) -> list[Module]:
     return found
 
 
-def render(memory: Path) -> list[str]:
-    """The pack's context block: every module, in full.
+def render(memory: Path, *, query: str | None = None,
+           now: float | None = None) -> list[str]:
+    """The pack's context block: the modules, in full.
 
     The pack's standing rule is that it prints pointers and never bodies,
     because a body in the pack is a second copy of the memory that goes
     stale inside the window. These are the exception, and the reason is
     exact: they have no clock, so there is no version of one that can go
     stale mid-session.
+
+    With a query, motivations whose keywords it doesn't touch collapse to
+    one line each — slug and age, never nothing, because a signal that
+    vanished from the pack is a signal nobody knows to go and read.
+    Beliefs never collapse, whatever the query says.
     """
+    now = time.time() if now is None else now
+    wanted = terms(query) if query else None
     out: list[str] = []
     for type_ in layout.CONTEXT:
         found = read(memory, type_)
         if not found:
             continue
+        gate = wanted is not None and type_ in GATED
+        whole = [m for m in found if not gate or m.matches(wanted)]
+        rest = [m for m in found if gate and not m.matches(wanted)]
+
         out.append(f"{type_}s — {LABELS[type_]}:")
-        for module in found:
+        for module in whole:
             out.append(f"  [{module.slug}]")
             for line in module.text().splitlines():
                 out.append(f"  {line}".rstrip())
+            out.append("")
+        if rest:
+            out.append(f"  not matched by this turn — whole in "
+                       f"{HOMES[type_]}/:")
+            for module in rest:
+                age = files.ago(now - module.path.stat().st_mtime)
+                out.append(f"    [{module.slug}] — {age}")
             out.append("")
     return out

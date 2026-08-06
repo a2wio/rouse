@@ -1,5 +1,4 @@
 ---
-keywords: planning, plan-mode, code, approach, review
 ---
 
 Placeholder — a second example belief, here to show what modular means:
