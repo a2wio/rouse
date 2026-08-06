@@ -2,29 +2,43 @@
 
 The ladder is intent. These two are the things that actually execute:
 a task is work handed to somebody else, a reminder is a promise on a
-clock. Both are files, and that is the point — **delegation and
+clock. Both are records, and that is the point — **delegation and
 follow-through have no existence outside the filesystem**, so neither
 can be scheduled and forgotten.
 
 ---
 
-## tasks — `memory/tasks/`
+## tasks — `task.md`
 
 A background job. The conversational side of an agent writes one and
 carries on; a worker picks it up and appends its result to the same
 file.
+
+A task lives **inside the record it is a run of**:
+
+    …/2026-03-14-migration-verified/     the intention
+      intention.md
+      run-it-on-the-branch/              the task
+        task.md
+        run.log
 
     ---
     status: pending           pending | running | done | failed | cancelled
     category: engineering     a label for humans, not a router
     model: default            optional — who does the work
     reasoning: medium         optional — low | medium | high
-    intention: 2026-03-14-migration-verified
-    action: 2026-03-14-run-it-on-the-branch
     repo: acme/api            optional — whatever your runner needs
     ---
     What to find out or do, why it's wanted, and what a useful answer
     looks like.
+
+There is no `intention:` or `action:` field any more. The directory it
+sits in is what it is a run of, and a worker's output — the log, the
+diff, the screenshots — belongs in that same directory rather than in a
+scratch space nobody looks in again.
+
+A task with nothing above it is legal and sits at the top of
+`entrypoint/`: it is a job that is a run of nothing in particular.
 
 The lifecycle is the contract:
 
@@ -44,11 +58,11 @@ Three properties fall out of it being a file and not a queue entry:
 
 - **Restartable.** A crashed runner leaves `running` on disk. Whatever
   comes back can see the job, see that nothing is holding it, and decide.
-- **Inspectable.** `grep -l 'status: pending' memory/tasks/*.md` is the
+- **Inspectable.** `grep -rl 'status: pending' --include=task.md` is the
   queue depth, and it is also a probe.
-- **Attributable.** `intention:` and `action:` link the run to the thing
-  it is a run *of*, which is what makes the sweeper stay quiet — see
-  below — and what makes an outcome judgeable later.
+- **Attributable.** Its path is what it is a run *of*, which is what
+  makes the sweeper stay quiet — see below — and what makes an outcome
+  judgeable later.
 
 ### movement, upward
 
@@ -57,9 +71,9 @@ is nudged.** The work is in flight; a nudge would be noise. When it
 finishes, the levels above it become due again — which is exactly the
 right moment to ask the only question that matters: *did that close it?*
 
-That is the whole integration between the two halves of this spec. A
-task naming no `intention:` behaves normally; it just doesn't count as
-movement for anything.
+That is the whole integration between the two halves of this spec, and
+under the new shape it needs no wiring at all: "above it" is the
+directory it is in.
 
 ### cancelling
 
@@ -92,15 +106,17 @@ progress is not a checkpoint; no line is the default and costs nothing.
 
 ---
 
-## reminders — `memory/reminders/`
+## reminders — `reminder.md`
 
 A clock and a body. This is how an agent reaches out first.
+
+    inventory/reminders/call-the-bank/
+      reminder.md
 
     ---
     due: 2026-03-15 09:00
     status: pending           pending | fired | done | expired
     channel: default          optional — where to deliver
-    intention: 2026-03-14-migration-verified
     ---
     What this is about, what to say, tone notes for future-you.
 
@@ -113,7 +129,12 @@ A clock and a body. This is how an agent reaches out first.
   things work.
 
 So "I'll remind you at nine" is a promise the agent can make and keep —
-by writing the file in the same turn it says the words.
+by writing it in the same turn it says the words.
+
+Most reminders are aimed outward and have nothing above them, which is
+why `inventory/reminders/` is their home. One that belongs to something
+you are doing may instead live inside that record, and then it counts as
+movement for it like any other child.
 
 ### nagging — for things a human has to do
 

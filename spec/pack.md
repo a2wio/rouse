@@ -18,22 +18,24 @@ tokens, and spend them on pointers rather than content.
       jobs-in-flight: 1
       disk-free: <unknown>
 
-    due: 2 records have stopped moving
-      intentions/2026-03-14-migration-verified — last moved 4h ago
+    due: 2 record(s) want you
+      intention/2026-03-14-migration-verified — 4h ago
+        at: entrypoint/liability/keep-the-deploy-trustworthy/2026-03-14-migration-verified
         closes-when: the staging migration has run once with me watching
-      actions/2026-03-12-ask-about-the-rollback — open 2d, no outcome
+      action/2026-03-12-ask-about-the-rollback — 2d ago
+        at: entrypoint/liability/keep-the-deploy-trustworthy/ask-about-it
 
-    ladder: 3 beliefs · 2 motivations · 4 intentions (2 stale) · 1 goal
+    ladder: 3 beliefs · 2 motivations · 4 intentions · 1 goal
 
     fresh memory (read what's relevant):
-      notes/projects/api.md (2h ago — postgres, migrations, staging,
-        rollback) [owner]
-      notes/craft/deploys.md (yesterday — pipeline, green, skipped,
-        evidence) [agent]
+      inventory/notes/projects/api.md (2h ago — postgres, migrations,
+        staging, rollback) [owner]
+      inventory/notes/craft/deploys.md (yesterday — pipeline, green,
+        skipped, evidence) [agent]
 
     older memory (scan the keywords, open what matters):
-      notes/people/ops-team.md (9d ago — ops, escalation, pager,
-        on-call, who-to-ask) [owner]
+      inventory/notes/people/ops-team.md (9d ago — ops, escalation,
+        pager, on-call, who-to-ask) [owner]
       ... 40 more
 
     not listed: 212 closed records older than 12h. They are on disk,
@@ -49,9 +51,10 @@ age below depends on this line.
 instruction that they outrank any file. `<unknown>` renders as
 `<unknown>`; see `probes.md`.
 
-**3. What is due.** Anything the clock would wake about. In tier 1 —
-no daemon — this line *is* the clock: overdue records surface at the top
-of every session rather than never.
+**3. What is due.** Anything the clock would wake about, with the path
+to it — nesting means the name alone no longer says where to look. In
+tier 1 — no daemon — this block *is* the clock: overdue records surface
+at the top of every session rather than never.
 
 **4. The memory index.** Recently-touched files listed with their
 keywords; everything older collapsed to name, age, keywords, origin.

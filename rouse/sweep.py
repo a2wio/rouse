@@ -13,16 +13,16 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from . import files, levels
+from . import files, layout, levels
 
 
 def wake_text(item: levels.Due, now: float) -> str:
-    """The record's body, plus the three facts the model cannot infer:
-    which level, how long it sat, which nudge this is."""
+    """The record's body, plus the facts the model cannot infer: which
+    level, where it sits, how long it sat, which nudge this is."""
     head = f"{item.id} — {item.reason}, last moved {files.ago(now - item.since)}"
     if n := item.nudges():
         head += f", nudge {n + 1}"
-    lines = [head]
+    lines = [head, f"at: {item.rel}"]
     for field in ("closes-when", "success-when", "outcome", "due"):
         if value := item.head.get(field):
             lines.append(f"{field}: {value}")
@@ -36,12 +36,12 @@ class FileSink:
     never lost, only late."""
 
     def __init__(self, memory: Path):
-        self.dir = Path(memory) / ".rouse" / "nudges"
+        self.dir = Path(memory) / layout.SCRATCH / "nudges"
 
     def __call__(self, item: levels.Due, text: str, now: float) -> bool:
         self.dir.mkdir(parents=True, exist_ok=True)
         name = time.strftime("%Y%m%d-%H%M", time.localtime(now))
-        (self.dir / f"{name}-{item.level}-{item.stem}.md").write_text(
+        (self.dir / f"{name}-{item.type}-{item.slug}.md").write_text(
             text, encoding="utf-8")
         return True
 
@@ -67,8 +67,9 @@ class WebhookSink:
         self.url = url
 
     def __call__(self, item, text, now) -> bool:
-        payload = json.dumps({"record": item.id, "level": item.level,
-                              "reason": item.reason, "nudge": item.nudges() + 1,
+        payload = json.dumps({"record": item.id, "type": item.type,
+                              "at": str(item.rel), "reason": item.reason,
+                              "nudge": item.nudges() + 1,
                               "text": text}).encode()
         req = urllib.request.Request(
             self.url, data=payload,
@@ -84,7 +85,7 @@ def record_sent(item: levels.Due, now: float) -> None:
     """Write down that it went out. Reminders re-arm themselves here —
     the loop does it, never the model, because firing is not completing
     and a nudge that went out leaves the file open regardless."""
-    if item.level != "reminders":
+    if item.type != "reminder":
         files.set_fields(item.path, swept=files.stamp(now),
                          nudges=item.nudges() + 1)
         return
@@ -110,15 +111,16 @@ def revive_stuck(records: levels.Records, now: float,
     a dead daemon. Flip it back so the nudge goes out late instead of
     never. Late is recoverable."""
     revived = []
-    for path, head in records.level("reminders"):
-        if (head.get("status") or "").strip() != "fired":
+    for rec in records.of("reminder"):
+        if (rec.head.get("status") or "").strip() != "fired":
             continue
-        if not files.parse_interval(head.get("nag")):
+        if not files.parse_interval(rec.head.get("nag")):
             continue
-        fired = files.parse_stamp(head.get("fired")) or path.stat().st_mtime
+        fired = (files.parse_stamp(rec.head.get("fired"))
+                 or rec.path.stat().st_mtime)
         if now - fired >= after:
-            files.set_fields(path, status="pending")
-            revived.append(path)
+            files.set_fields(rec.path, status="pending")
+            revived.append(rec.path)
     return revived
 
 

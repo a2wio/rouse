@@ -11,7 +11,8 @@ private; it went public last night; the agent has a sentence in its own
 handwriting saying otherwise and no reason to doubt it. The fix is not a
 better note. It is not having a note.
 
-`memory/probes.md` holds them, one fenced block each.
+`inventory/probes.md` holds them, one fenced block each. A probe has no
+clock and nothing above it, which is what makes `inventory/` its home.
 
     ```probe
     name: open-prs
@@ -29,8 +30,8 @@ there, next to the probe, where a future reader will find it.
 
     name   what it's called: in the pack, and in a note's `probes:` line
     tier   pack | demand — when it runs
-    cmd    shell. cwd is the directory holding probes.md; $MEMORY is
-           the memory directory, $ROOT its parent.
+    cmd    shell. cwd is the memory directory; $MEMORY is it, $ROOT its
+           parent.
     ttl    seconds a reading may be reused. demand only; pack always
            measures fresh.
 

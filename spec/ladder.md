@@ -13,21 +13,53 @@ too.**
           goal    a loop with a success condition.
             action one shot — and the only level that carries an outcome.
 
-Five flat directories under `memory/`. Containment is the `parent:`
-field, by file stem, never by path:
+## containment is the path
 
-    parent: 2026-03-01-be-answerable-for-what-i-promise
-    parent: motivations/2026-03-01-be-answerable-for-what-i-promise
+**A record is a directory containing `<type>.md`.** The type names the
+level; the directory it sits in names its parent.
 
-Both forms mean the same thing; the directory prefix is allowed because
-it reads better. A record with no parent is fine — the field makes *why
-does this exist* answerable, it is not a requirement.
+    entrypoint/
+      green-deploy-isnt-a-migration/            belief
+        belief.md
+        keep-the-deploy-trustworthy/            motivation
+          motivation.md
+          2026-03-14-migration-verified/        intention
+            intention.md
+            verify.sh
+            run-it-on-the-branch/               task
+              task.md
+              output.txt
+
+No field says who the parent is, and that is the point — a field can
+disagree with the tree, and then something has to decide which one is
+lying. Two more things fall out of it:
+
+- **a record's directory is where its things live.** The script it runs,
+  the screenshot it is about, the output it produced. They sit beside
+  `<type>.md`, and they move when it moves.
+- **`tree` shows the ladder.** Who descends from what, without opening a
+  file.
+
+**Levels may be skipped.** A task can sit directly under an intention
+when there is no goal worth writing; a parent is the *nearest* enclosing
+record, not the one the table says should be there. Zero goals is the
+normal case, and the tree should show what you actually wrote.
+
+**Nothing is required above anything.** A record may sit at the top of
+`entrypoint/`, and an intention with no motivation over it does exactly
+that — it looks unmoored, because it is. `rouse check` warns and never
+errors. The alternative, a required chain, means writing an intention
+costs you inventing a motivation, which is how you get motivations that
+are slogans.
+
+Slugs are what you say out loud, so keep them unique across the tree; the
+path is the id when two happen to collide.
 
 ## the shared arithmetic
 
 One sweeper walks all of it. Every level does the same three steps —
 read the header, ask whether it is moving, wake if it isn't — and what
-differs per level is the directory, the interval, and the question.
+differs per level is the interval and the question.
 
     due_at = max(last-moved, swept, the level's own clock) + stale-after
 
@@ -47,7 +79,6 @@ Shared fields, at every level:
     opened        when it started
     last-moved    when it last moved. YOURS to stamp.
     stale-after   30m / 2h / 1d. Omit for the level's default.
-    parent        the record above it, by stem
     swept         machine field — when it was last nudged
     nudges        machine field — how many times
 
@@ -57,7 +88,7 @@ rather than never.
 
 ---
 
-## beliefs — `memory/beliefs/`
+## beliefs — `belief.md`
 
 Ground truth about the world the agent works in. **Never swept. Nothing
 nudges you about a belief, ever.**
@@ -79,10 +110,10 @@ Writing one is a real act, not a note. It carries the day it was
 learned, what taught it, and what would make you stop believing it.
 Keep them few. If everything is a belief, nothing is.
 
-A belief with no motivation under it is a slogan — worth flagging in a
-lint pass, not worth a wake.
+A belief with nothing under it is a slogan — worth flagging in a lint
+pass, not worth a wake.
 
-## motivations — `memory/motivations/`
+## motivations — `motivation.md`
 
 A standing why. An intention with no done state: it never closes, it
 only spawns children.
@@ -91,7 +122,6 @@ only spawns children.
     status: open              open | review | retired
     opened: 2026-02-11
     last-moved: 2026-03-14 09:00
-    parent: beliefs/green-deploy-isnt-a-migration
     signals: nobody asks "did the migration actually run" anymore
     ---
     Keep the deploy trustworthy — the pipeline should be evidence, not
@@ -106,7 +136,7 @@ Ends `retired`, out loud, the way an intention ends `dropped`.
 `status: review` counts as open and keeps being swept — parking one in
 review forever is evaporation with extra steps.
 
-## intentions — `memory/intentions/`
+## intentions — `intention.md`
 
 The load-bearing level. What you mean to make true.
 
@@ -116,7 +146,6 @@ The load-bearing level. What you mean to make true.
     last-moved: 2026-03-14 15:40
     stale-after: 2h
     closes-when: the staging migration has run once with me watching
-    parent: motivations/keep-the-deploy-trustworthy
     ---
     I said I'd verify the migration myself rather than trust the green
     check. Until I've watched it run, I haven't.
@@ -127,7 +156,7 @@ The load-bearing level. What you mean to make true.
 - Default `stale-after` is 2h.
 
 **Write it in the same turn you say the thing.** Not everything said
-becomes a file — an intention is something you would be embarrassed to
+becomes a record — an intention is something you would be embarrassed to
 have quietly dropped.
 
 ### the two endings
@@ -138,14 +167,14 @@ have quietly dropped.
 - `status: dropped` — you are letting it go. **Say so, and say why.** A
   quiet drop is the exact failure the level exists to stop.
 
-Either way it earns a line in `memory/notes/` afterwards; the dropped
-ones teach more than the done ones. The file stays where it is —
-closed, not deleted.
+Either way it earns a line in `inventory/notes/` afterwards; the dropped
+ones teach more than the done ones. The directory stays where it is —
+closed, not deleted, with everything it accumulated still in it.
 
 If a sweep catches something whose next move honestly isn't yours, say
 that, and push `last-moved` forward so it comes back later.
 
-## goals — `memory/goals/`
+## goals — `goal.md`
 
 A loop rather than a one-shot: try, judge, revise, try again.
 
@@ -153,7 +182,6 @@ A loop rather than a one-shot: try, judge, revise, try again.
     status: open              open | done | abandoned
     opened: 2026-03-14 18:00
     last-moved: 2026-03-14 18:00
-    parent: intentions/2026-03-14-migration-verified
     success-when: two consecutive deploys need no manual step
     falsifiers: the manual step turns out to be a platform limit
     review-every: 7d
@@ -174,7 +202,7 @@ check: stop looking for success, start looking for what would kill it.
 `abandoned` with the falsifier that fired is a real outcome, not a
 failure.
 
-## actions — `memory/actions/`
+## actions — `action.md`
 
 The one-shot below an intention or a goal, and the only level that
 carries the field nothing else has.
@@ -183,7 +211,6 @@ carries the field nothing else has.
     status: open              open | done | dropped
     opened: 2026-03-14 18:00
     last-moved: 2026-03-14 18:00
-    parent: intentions/2026-03-14-migration-verified
     closes-when: I've run it on the branch and read the output
     outcome:                  as-expected | surprising | contradicts
     ---
@@ -200,10 +227,13 @@ Where it lands next is what the three words are for:
     contradicts   name the belief you are no longer sure of.
 
 That last one is the back edge: the bottom of the ladder is how the top
-of it gets revised. Without it the beliefs are decoration.
+of it gets revised. Without it the beliefs are decoration. It is also the
+one relationship the tree cannot express — a contradicted belief is
+somewhere else entirely — so it goes in the body, in words, where a
+person will read it.
 
 **Zero tasks is the normal case.** An action you did yourself in a turn
-is a file you write and judge in the same turn. Swept after 1d with no
+is a record you write and judge in the same turn. Swept after 1d with no
 task under it and no outcome on it.
 
 ## the defaults, in one table
@@ -212,7 +242,7 @@ task under it and no outcome on it.
     belief        never         —                          held / released
     motivation    7d            —                          retired
     intention     2h            —                          done / dropped
-    goal          1h            last ending underneath     done / abandoned
+    goal          1h            last ending underneath      done / abandoned
     action        1d            —                          done / dropped (+ outcome)
 
 All of them are guesses that should be configurable, and all of them err

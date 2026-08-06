@@ -1,8 +1,8 @@
 """Named commands whose output is the answer.
 
-`probes.md` is re-read on every render, so a probe written this minute
-renders in the next pack with nothing restarted. A probe you have to
-deploy is a probe nobody adds.
+`inventory/probes.md` is re-read on every render, so a probe written this
+minute renders in the next pack with nothing restarted. A probe you have
+to deploy is a probe nobody adds.
 
 The one rule with no exceptions: a probe that fails, times out or blows
 the budget renders `<unknown>`, and `<unknown>` never, ever degrades
@@ -15,6 +15,8 @@ import re
 import subprocess
 import time
 from pathlib import Path
+
+from . import layout
 
 FENCE = re.compile(r"^```probe\s*$")
 UNKNOWN = "<unknown>"
@@ -29,6 +31,10 @@ class Probe:
         self.cmd = cmd
         self.ttl = ttl
         self.unknown_ok = unknown_ok
+
+
+def path_of(memory: Path) -> Path:
+    return Path(memory) / layout.PROBES
 
 
 def read(path: Path) -> list[Probe]:
@@ -63,6 +69,10 @@ def _int(raw):
 
 
 def run(probe: Probe, memory: Path, timeout: float) -> str:
+    # absolute, because cwd is the memory directory: a relative $ROOT
+    # would resolve inside itself and every probe using it would answer
+    # <unknown> for a reason nobody would find
+    memory = Path(memory).resolve()
     env = dict(os.environ, MEMORY=str(memory), ROOT=str(memory.parent))
     try:
         out = subprocess.run(probe.cmd, shell=True, cwd=memory, env=env,
@@ -84,7 +94,7 @@ def readings(memory: Path, tier: str = "pack",
     budget runs out on renders `<unknown>`, which is the correct answer
     — it means go check.
     """
-    probes = [p for p in read(memory / "probes.md") if p.tier == tier]
+    probes = [p for p in read(path_of(memory)) if p.tier == tier]
     if tier != "pack":
         return [(p.name, _cached(p, memory)) for p in probes]
     deadline = time.monotonic() + budget_ms / 1000
@@ -99,7 +109,7 @@ def readings(memory: Path, tier: str = "pack",
 def _cached(probe: Probe, memory: Path) -> str:
     """Demand probes may reuse a reading for `ttl` seconds — they leave
     the machine, and the subject rarely changes inside a minute."""
-    store = memory / ".rouse" / "probes.json"
+    store = memory / layout.SCRATCH / "probes.json"
     ttl = probe.ttl if probe.ttl is not None else TTL_S
     now = time.time()
     try:

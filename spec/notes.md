@@ -1,8 +1,14 @@
 # notes — durable memory
 
-`memory/notes/` is the part that looks like every other memory system:
+`inventory/notes/` is the part that looks like every other memory system:
 what the agent learned and wants to still know next week. The
 conventions around it are what make the rest work.
+
+A note has no clock and no position in the ladder, which is why it lives
+in `inventory/` and why it is the one thing here that is a plain file
+rather than a directory. One that acquires a screenshot or a script
+becomes a directory holding `note.md`, like everything else — the index
+then names the directory.
 
     ---
     updated: 2026-03-14
@@ -18,7 +24,7 @@ conventions around it are what make the rest work.
 
 - `updated` — the day the content last changed. Yours to keep true.
 - `keywords` — comma-separated, generous. See below.
-- `probes` — optional; names from `memory/probes.md`. See `probes.md`.
+- `probes` — optional; names from `inventory/probes.md`. See `probes.md`.
 - `origin`, `origin-turn` — machine fields. See `provenance.md`. Never
   type these.
 
@@ -42,10 +48,10 @@ Twenty keywords on a file is normal and costs one line.
 
 Notes go in subdirectories by *kind of thing*, not by project:
 
-    notes/people/      who you work with, what they want, how they talk
-    notes/projects/    things being built
-    notes/craft/       how you work — conventions, tooling, hard-won limits
-    notes/design/      design documents, decisions and their reasons
+    inventory/notes/people/     who you work with, what they want
+    inventory/notes/projects/   things being built
+    inventory/notes/craft/      how you work — conventions, tooling, limits
+    inventory/notes/design/     design documents, decisions and their reasons
 
 Four is a suggestion. The rule that matters is that a new note lands in
 a group that already exists, and a note that fits none of them stays

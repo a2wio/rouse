@@ -13,7 +13,8 @@ nobody parses, so write the *why* beside it.
     name   what it's called, here and in a note's `probes:` line
     tier   pack (every session, local, shares a 150ms budget)
            demand (when the subject comes up; may leave the machine)
-    cmd    shell. cwd is this directory; $MEMORY is here, $ROOT its parent.
+    cmd    shell. cwd is the memory directory; $MEMORY is it, $ROOT its
+           parent.
     ttl    seconds a reading may be reused. demand only.
 
 ## pack — every session, local, cheap
@@ -21,7 +22,7 @@ nobody parses, so write the *why* beside it.
 ```probe
 name: jobs-in-flight
 tier: pack
-cmd:  grep -lE '^status: (pending|running)' "$MEMORY"/tasks/*.md 2>/dev/null | wc -l | tr -d ' '
+cmd:  grep -rlE '^status: (pending|running)' "$MEMORY" --include=task.md 2>/dev/null | wc -l | tr -d ' '
 ```
 
 Background work not finished. `0` is the normal reading between jobs.

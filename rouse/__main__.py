@@ -4,6 +4,9 @@
     rouse pack            the context block, for session start
     rouse due             what the clock would wake about, one line each
     rouse sweep           the tick loop, with a wake sink
+    rouse new             make a record, under whatever it belongs to
+    rouse promote         a backlog item becomes an intention
+    rouse tree            the ladder, as it actually sits on disk
     rouse check           lint the memory tree
     rouse stamp           write provenance — for a wrapper, not the model
 """
@@ -14,11 +17,10 @@ import sys
 import time
 from pathlib import Path
 
-from . import files, levels, pack, probes, sweep
+from . import files, layout, levels, pack, probes, scaffold, sweep
 
 SKELETON = Path(__file__).resolve().parents[1] / "skeleton"
 ORIGINS = ("owner", "agent", "system", "untrusted", "unknown")
-LADDER_DIRS = ("beliefs", "motivations", "goals", "actions")
 
 
 def main(argv=None) -> int:
@@ -37,8 +39,6 @@ def main(argv=None) -> int:
 
     p = sub.add_parser("init", help="drop the skeleton in")
     p.add_argument("target", nargs="?", default=".", type=Path)
-    p.add_argument("--ladder", action="store_true",
-                   help="also create beliefs/ motivations/ goals/ actions/")
 
     p = sub.add_parser("pack", help="the context block for session start",
                        parents=[common])
@@ -47,6 +47,19 @@ def main(argv=None) -> int:
     sub.add_parser("due", help="what the clock would wake about",
                    parents=[common])
     sub.add_parser("check", help="lint the memory tree", parents=[common])
+    sub.add_parser("tree", help="the ladder as it sits on disk",
+                   parents=[common])
+
+    p = sub.add_parser("new", help="make a record", parents=[common])
+    p.add_argument("type", choices=layout.TYPES)
+    p.add_argument("slug")
+    p.add_argument("--under", help="the slug of the record it sits under, "
+                                   "or a path inside the memory directory")
+
+    p = sub.add_parser("promote", help="a backlog item becomes an intention",
+                       parents=[common])
+    p.add_argument("slug")
+    p.add_argument("--under", help="the motivation it belongs to")
 
     p = sub.add_parser("sweep", help="the tick loop", parents=[common])
     p.add_argument("--sink", default="file",
@@ -75,10 +88,6 @@ def cmd_init(args) -> int:
         print(f"{target} already exists — not touching it", file=sys.stderr)
         return 2
     shutil.copytree(SKELETON / "memory", target)
-    if args.ladder:
-        for name in LADDER_DIRS:
-            (target / name).mkdir()
-            (target / name / ".gitkeep").touch()
     try:
         target = target.relative_to(Path.cwd())
     except ValueError:
@@ -89,7 +98,7 @@ def cmd_init(args) -> int:
     print("(CLAUDE.md, AGENTS.md, .cursor/rules, the system prompt):")
     print()
     print(f"    Your memory lives in `{target}`. "
-          f"Read `{target}/rouse.md` before using it.")
+          f"Read `{target}/{layout.INSTRUCTIONS}` before using it.")
     print()
     print("that is tier 0 and it works. For the clock:")
     print(f"    python3 -m rouse pack  --memory {target}   # at session start")
@@ -104,9 +113,40 @@ def cmd_pack(args) -> int:
 
 def cmd_due(args) -> int:
     now = time.time()
-    found = levels.due(levels.Records(args.memory), now)
-    for item in found:
-        print(f"{item.id}\t{item.reason}\t{files.ago(now - item.since)}")
+    for item in levels.due(levels.Records(args.memory), now):
+        print(f"{item.id}\t{item.reason}\t{files.ago(now - item.since)}"
+              f"\t{item.rel}")
+    return 0
+
+
+def cmd_tree(args) -> int:
+    sys.stdout.write(scaffold.render_tree(args.memory))
+    return 0
+
+
+def cmd_new(args) -> int:
+    try:
+        path = scaffold.new(args.memory, args.type, args.slug, args.under)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    print(path)
+    if blank := scaffold.blanks(path):
+        print("fill in: " + ", ".join(blank))
+    return 0
+
+
+def cmd_promote(args) -> int:
+    try:
+        path = scaffold.promote(args.memory, args.slug, args.under)
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    print(path)
+    if blank := scaffold.blanks(path):
+        print("fill in: " + ", ".join(blank)
+              + " — a promoted item without a closes-when is a backlog item "
+                "with a clock attached")
     return 0
 
 
@@ -159,47 +199,70 @@ def cmd_check(args) -> int:
     def rel(path):
         return path.relative_to(memory) if memory in path.parents else path
 
-    for name in (*levels.LEVELS, *levels.RUNS, "backlog"):
-        records.level(name)
+    all_records = records.all()
     for path in records.broken:
         errors.append(f"{rel(path)}: no header — nothing can track this")
+    for path in records.conflicts:
+        errors.append(f"{rel(path)}: a second record file in the same "
+                      "directory — one record, one directory")
 
-    known = {path.stem for name in (*levels.LEVELS, *levels.RUNS)
-             for path, _ in records.level(name)}
+    # the flat-layout mistake: a record written as `<slug>.md` instead of
+    # `<slug>/<type>.md`. An .md beside a record file is an asset and
+    # fine; an .md in a directory that is nobody's record is a lost file.
+    homes = {r.dir for r in all_records}
+    for root in (layout.ENTRYPOINT, layout.REMINDERS, layout.BACKLOG):
+        for path in sorted((memory / root).rglob("*.md")):
+            if path.stem in layout.TYPES or path.parent in homes:
+                continue
+            if path.parent == memory / layout.ENTRYPOINT and path.name \
+                    == Path(layout.INSTRUCTIONS).name:
+                continue
+            warnings.append(f"{rel(path)}: not a record and not beside one — "
+                            "a record is a directory holding <type>.md")
 
-    for name in (*levels.LEVELS, *levels.RUNS, "backlog"):
-        for path, head in records.level(name):
-            where = rel(path)
-            for field, parse in (("stale-after", files.parse_interval),
-                                 ("nag", files.parse_interval),
-                                 ("last-moved", files.parse_stamp),
-                                 ("due", files.parse_stamp),
-                                 ("opened", files.parse_stamp)):
-                if head.get(field) and parse(head[field]) is None:
-                    errors.append(f"{where}: unparseable {field}: "
-                                  f"{head[field]!r}")
-            if (parent := head.get("parent")) and levels.stem(parent) not in known:
-                warnings.append(f"{where}: parent {parent!r} doesn't exist")
-            if name == "intentions" and not head.get("closes-when"):
+    seen: dict[tuple[str, str], Path] = {}
+    for rec in all_records:
+        where = rec.rel
+        for field, parse in (("stale-after", files.parse_interval),
+                             ("nag", files.parse_interval),
+                             ("review-every", files.parse_interval),
+                             ("last-moved", files.parse_stamp),
+                             ("due", files.parse_stamp),
+                             ("opened", files.parse_stamp)):
+            if rec.head.get(field) and parse(rec.head[field]) is None:
+                errors.append(f"{where}: unparseable {field}: "
+                              f"{rec.head[field]!r}")
+        if rec.head.get("parent"):
+            warnings.append(f"{where}: a `parent:` field — containment is "
+                            "the path now, and two answers is one too many")
+        if (key := (rec.type, rec.slug)) in seen:
+            warnings.append(f"{where}: same name as {seen[key]} — the slug is "
+                            "how you'll say it out loud, so make it unique")
+        else:
+            seen[key] = where
+
+        if rec.type == "intention":
+            if not rec.head.get("closes-when"):
                 warnings.append(f"{where}: no closes-when — you can't tell "
                                 "when this is finished")
-            if name == "backlog":
-                for field in ("stale-after", "last-moved", "parent"):
-                    if head.get(field):
-                        warnings.append(f"{where}: backlog items have no "
-                                        f"clock — drop {field}, or promote "
-                                        "this to an intention")
-            if name == "reminders" and not head.get("due"):
-                errors.append(f"{where}: a reminder with no due is not a "
-                              "reminder")
+            if not any(a.type == "motivation" for a in records.ancestors(rec)):
+                warnings.append(f"{where}: no motivation above it — fine for "
+                                "now, but nothing says why it exists")
+        if rec.type == "backlog":
+            for field in ("stale-after", "last-moved"):
+                if rec.head.get(field):
+                    warnings.append(f"{where}: backlog items have no clock — "
+                                    f"drop {field}, or promote this")
+            if records.children(rec):
+                warnings.append(f"{where}: something is nested under a "
+                                "backlog item, and nothing will ever sweep it")
+        if rec.type == "reminder" and not rec.head.get("due"):
+            errors.append(f"{where}: a reminder with no due is not a reminder")
+        if rec.type == "belief" and not records.children(rec):
+            warnings.append(f"{where}: nothing under this belief — it's a "
+                            "slogan until something acts on it")
 
-    for path, head in records.level("beliefs"):
-        if not any(level == "motivations"
-                   for level, _, _ in records.children(path.stem)):
-            warnings.append(f"{rel(path)}: no motivation under this belief — "
-                            "it's a slogan until something acts on it")
-
-    for path in sorted((memory / "notes").rglob("*.md")):
+    for path in pack.notes(memory):
         head = files.head(path)
         if head is None:
             warnings.append(f"{rel(path)}: no header — it won't be indexed")
@@ -211,14 +274,14 @@ def cmd_check(args) -> int:
     spent = int((time.monotonic() - started) * 1000)
     # a probe marked unknown-ok is *designed* to go quiet — it reads a
     # file some daemon writes, so silence is the reading (spec/probes.md)
-    quiet_ok = {p.name for p in probes.read(memory / "probes.md")
+    quiet_ok = {p.name for p in probes.read(probes.path_of(memory))
                 if p.unknown_ok}
     for name, value in readings:
         if value == probes.UNKNOWN and name not in quiet_ok:
-            warnings.append(f"probes.md: {name} answered <unknown>")
+            warnings.append(f"{layout.PROBES}: {name} answered <unknown>")
     if spent > probes.BUDGET_MS:
-        warnings.append(f"probes.md: the pack tier took {spent}ms of its "
-                        f"{probes.BUDGET_MS}ms — move something to demand")
+        warnings.append(f"{layout.PROBES}: the pack tier took {spent}ms of "
+                        f"its {probes.BUDGET_MS}ms — move something to demand")
 
     for line in errors:
         print(f"error: {line}")

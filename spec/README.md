@@ -13,19 +13,33 @@ it.
 
 ## the rules underneath all of it
 
-**One thing per file.** A file is the unit of everything: the unit of
-recall, the unit of staleness, the unit of a wake. Two topics in one
-file means two clocks fighting over one `last-moved`.
+**A record is a directory containing `<type>.md`.** The type names the
+level — `belief`, `motivation`, `intention`, `goal`, `action`, `task`,
+`reminder`, `backlog`. The directory it sits in names its parent.
 
-**Flat directories, containment by field.** Every level is a flat
-directory of `*.md`. A record names its parent with `parent: <stem>`,
-never by living inside it. Paths are ids, ids never move, and reparenting
-is a one-line edit instead of a broken link.
+    entrypoint/liability/keep-the-deploy-trustworthy/verify-it/intention.md
+
+is an intention, under a motivation, under a belief, and nothing in any
+header says so. Containment used to be a `parent:` field; a field can
+disagree with the tree, and then something has to decide which one is
+lying.
+
+It also gives every record somewhere to keep its things — the script it
+runs, the screenshot it is about, the output it produced — and it makes
+`tree` show the ladder instead of a pile of directories.
+
+**Two halves.** `entrypoint/` is intent: the instruction file and every
+record with a position in the ladder. `inventory/` is what has no
+position — `notes/`, `probes.md`, `reminders/`, `backlog/`.
+
+**One thing per record.** A record is the unit of everything: of recall,
+of staleness, of a wake. Two topics in one means two clocks fighting over
+one `last-moved`.
 
 **Frontmatter is the interface.** Everything a clock, a linter or an
-index needs is in the YAML-ish header. Bodies are for the model. No
-implementation may need to read a body to decide anything, which is what
-keeps a sweep over a thousand files cheap.
+index needs is in the header. Bodies are for the model. No implementation
+may need to read a body to decide anything, which is what keeps a sweep
+over a thousand records cheap.
 
 **The header is a subset of YAML on purpose.** `key: value`, one line
 each, no nesting, no lists, no anchors. A parser for it is thirty lines
@@ -50,7 +64,9 @@ worth more than the tidiness.
 
 Three things, and nothing else is required:
 
-1. **Parse the header** — the subset above, plus stamps and intervals.
+1. **Walk and parse.** Find every `<type>.md`, read the header subset
+   above, and take each record's parent to be the nearest enclosing
+   record directory.
 2. **Compute due** — `due_at = max(last-moved, swept, the level's own
    clock) + stale-after`, floored at 15 minutes, and never for a record
    with something open under it.
@@ -58,7 +74,8 @@ Three things, and nothing else is required:
    that it delivered. A wake that is lost quietly is the failure mode
    this whole system exists to prevent; see `design/clock.md`.
 
-Everything else — the pack format, the probe runner, the linter — is
-convenience. `rouse/` implements all of it in stdlib python, comments
-included, in about a thousand lines. That number is the real claim being
-made here: this is a set of agreements, not a platform.
+Everything else — the pack format, the probe runner, the linter, `new`
+and `promote` — is convenience. `rouse/` implements all of it in stdlib
+python, comments included, in under fourteen hundred lines. That number
+is the real claim being made here: this is a set of agreements, not a
+platform.

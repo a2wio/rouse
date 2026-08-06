@@ -7,27 +7,32 @@ compatible.
 
 ## one sweeper, not five
 
-The levels differ in a directory, a default interval, a definition of
-movement, and the sentence used to wake the agent. That is a table, not
-five programs.
+The levels differ in a default interval, a definition of movement, and
+the sentence used to wake the agent. That is a table, not five programs.
 
-    level         directory            interval   own clock                extra
-    motivations   memory/motivations/  7d         —
-    intentions    memory/intentions/   2h         —
-    goals         memory/goals/        1h         newest ending underneath  review-every
-    actions       memory/actions/      1d         —
-    reminders     memory/reminders/    per-file   —                         nag re-arm
+    level        interval   own clock                 extra
+    motivation   7d         —
+    intention    2h         —
+    goal         1h         newest ending underneath  review-every
+    action       1d         —
+    reminder     per-file   —                         nag re-arm
 
 Beliefs are not in the table and never join it. A level joins when it
 has its own condition, not when it exists — running the intention clock
 over motivations produces nudges that were never coming, which is
 precisely the noise that makes a nudge stop working.
 
+There is no directory column, because there are no level directories.
+The sweeper walks the whole tree once and takes a record's level from the
+name of its `<type>.md` and its parent from the directory above it (see
+`spec/README.md`). One walk, one dictionary, and every "is anything open
+under this" question is a lookup rather than a scan.
+
 The arithmetic every row shares:
 
     due_at = max(last-moved, swept, own clock) + stale-after
     floored at 15 minutes
-    skipped entirely while anything open names it as parent
+    skipped entirely while anything open sits inside it
 
 `swept:` in that max is what stops a nudge the agent didn't act on from
 repeating every tick. It is a machine field for the same reason.
@@ -72,7 +77,7 @@ Where a nudge goes out. Three shapes cover everything, in ascending
 order of how much infrastructure they need:
 
 **nudge file** (`--sink file`, the default). The wake is written to
-`memory/.rouse/nudges/<stamp>-<record>.md` and the *next* pack opens
+`memory/.rouse/nudges/<stamp>-<type>-<slug>.md` and the *next* pack opens
 with it. No delivery, no network, nothing to run but the sweeper — and
 if the sweeper isn't running either, tier 1's due-list produces the same
 information at session start. This is the honest floor: the wake is
@@ -106,7 +111,8 @@ exec: non-2xx means not delivered.
 The record's body, plus three facts the model cannot infer: which level
 this is, how long it has sat still, and which nudge number this is.
 
-    intentions/2026-03-14-migration-verified — nudge 2, last moved 4h ago
+    intention/2026-03-14-migration-verified — nudge 2, last moved 4h ago
+    at: entrypoint/liability/keep-the-deploy-trustworthy/2026-03-14-migration-verified
     closes-when: the staging migration has run once with me watching
 
     <the body>
@@ -118,7 +124,7 @@ tone; it only counts.
 produces from it should read as the agent thinking of the thing again.
 That is a prompt concern rather than a clock concern, but it is where
 most of these systems feel like software, so it belongs in the
-instruction file — see `skeleton/memory/rouse.md`.
+instruction file — see `skeleton/memory/entrypoint/rouse.md`.
 
 ## delivery, and what is deliberately not here
 

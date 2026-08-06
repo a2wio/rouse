@@ -2,7 +2,7 @@
 
 Everything an agent reads arrives as the same undifferentiated text. The
 operator's instruction, a support email, a fetched web page, a summary a
-sub-agent wrote: once any of it is a sentence in `memory/notes/`,
+sub-agent wrote: once any of it is a sentence in `inventory/notes/`,
 nothing distinguishes *I was told this* from *a page I was shown claimed
 this*.
 
@@ -62,7 +62,7 @@ stop.
 Provenance informs; it does not decide by itself. The agent sees the
 class beside each file in the pack:
 
-    notes/vendors/acme.md   [untrusted]  (4d ago — acme, invoice, portal)
+    inventory/notes/vendors/acme.md  [untrusted]  (4d ago — acme, invoice)
 
 and reads it as: this can inform what I say, but it is not my operator
 asking. `[unknown]` means nobody took a reading, which is not the same

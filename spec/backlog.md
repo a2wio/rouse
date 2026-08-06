@@ -1,7 +1,10 @@
 # backlog — the level with no clock
 
-`memory/backlog/` sits beside the ladder and answers the thing the
+`inventory/backlog/` sits beside the ladder and answers the thing the
 sweeper cannot express: **worth doing, not committed to.**
+
+    inventory/backlog/pin-the-runner-version/
+      backlog.md
 
     ---
     status: open              open | promoted | dropped
@@ -11,8 +14,10 @@ sweeper cannot express: **worth doing, not committed to.**
     What it is, why it's worth doing, and what was said when it got
     parked.
 
-No `last-moved`, no `stale-after`, no `parent`. **Nothing nudges you
-about a backlog item, ever.**
+No `last-moved`, no `stale-after`, and nothing above it. **Nothing nudges
+you about a backlog item, ever.** It is in `inventory/` for exactly that
+reason: it has no position in the ladder, because a position in the
+ladder is a clock.
 
 ## why it has to exist
 
@@ -23,20 +28,45 @@ meaning anything, and a system whose nudges don't mean anything is a
 system with no clock.
 
 So the tell is exact: **the moment you find yourself writing
-`stale-after: 30d`, the thing you wanted was a backlog file.**
+`stale-after: 30d`, the thing you wanted was a backlog item.**
 
 ## the price of having no clock
 
 An item may leave in exactly two ways:
 
-- **promoted** — it becomes an intention with its own clock, and the
-  backlog file records that it did.
+- **promoted** — it becomes an intention with its own clock.
 - **dropped** — out loud, to the operator, with the reason. Same rule as
-  a dropped intention.
+  a dropped intention. `status: dropped`, and it stays where it is.
 
 Nothing else, and never silently. An item that quietly stops existing is
 the failure the whole ladder was built against; the backlog is allowed
 to have no clock *only* because it has no quiet exit.
+
+## promotion is a move
+
+Under the flat layout, promoting meant editing a field. Now it is what
+it always was underneath — the thing changes level, so it changes place:
+
+    git mv inventory/backlog/pin-the-runner-version \
+           entrypoint/liability/keep-the-deploy-trustworthy/
+    mv .../pin-the-runner-version/backlog.md .../intention.md
+
+and the header becomes an intention's: `status: open`, a fresh
+`last-moved`, a `stale-after`, and the `closes-when` it now owes. Two
+fields record where it came from:
+
+    promoted: 2026-03-14 15:40
+    was: inventory/backlog/pin-the-runner-version
+
+Everything the item had accumulated while it was parked — the link
+somebody sent, the half-written script, the screenshot — moves with the
+directory, which is most of why the directory exists.
+
+**No tombstone is left behind.** The backlog is a list of what is still
+parked, and it stays readable by not accumulating what has left; where
+this one went is in git, and where it came from is in its own header.
+`rouse promote <slug> --under <motivation>` does the whole thing in one
+command, because a two-command move is a move somebody does halfway.
 
 ## when to write one
 
