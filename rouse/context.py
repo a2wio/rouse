@@ -1,24 +1,31 @@
 """The static layers: beliefs and motivations.
 
 Everything else in this package is a record — it has a status, a clock,
-and two ways of ending. These two have none of that. They are ground
-truths about the world the agent works in, and the only thing that ever
-happens to one is that a person writes it or deletes it.
+and two ways of ending. These two have none of that. They are context,
+and the only thing that ever happens to one is that a person writes it
+or deletes it.
 
     beliefs/belief-zero-downtime-deploys.md
-    motivations/motivation-keep-the-deploy-trustworthy.md
+    beliefs/motivations/motivation-two-deploys-broke-prod.md
 
-Flat files, one fact each, `<type>-<slug>.md`. Flat because nothing ever
-sits under one of these, and one per file because this is a system
-prompt cut into modules: a rule can be added, dropped, reviewed or
-copied to another agent without editing a wall of prose. The pack
+Flat files, one fact each, `<type>-<slug>.md`. Flat because no belief
+ever sits inside another belief, and one per file because this is a
+system prompt cut into modules: a rule can be added, dropped, reviewed
+or copied to another agent without editing a wall of prose. The pack
 injects all of them, whole, at the top of every session.
 
-A motivation differs from a belief only in what it is about — a belief
-is about the world, a motivation is about what you are currently for,
-and so it is the shorter-lived of the two. It holds the intentions under
-it in the sense that it says why they exist. It does not hold them in
-the filesystem; nothing does.
+The two differ in where they come from. A **belief** is internal and
+timeless — how the world works, how this team works, what the agent
+holds true regardless of the week. A **motivation** is external and
+momentary — a signal that arrived: somebody said something, a number
+crossed a line, it has been eleven days without a restore drill. It is
+the reason there is anything to do at all, and an intention is the
+agent's own answer to one.
+
+`motivations/` living inside `beliefs/` is that sentence made visible
+and nothing more. No motivation belongs to a belief, no intention
+belongs to a motivation, and neither relationship is in the filesystem —
+if you want the connection recorded, write the sentence in the body.
 """
 
 from pathlib import Path
@@ -27,9 +34,16 @@ from . import files, layout
 
 HOMES = {"belief": layout.BELIEFS, "motivation": layout.MOTIVATIONS}
 
+# how each layer announces itself in the pack. Both end the same way and
+# have to: a paragraph at the top of a session reads as something that
+# just came in, and a motivation — which really did arrive once — is the
+# one most likely to be replied to as if it just had.
+LABELS = {"belief": "ground truth, always true, not news",
+          "motivation": "signals that arrived — standing context, not news"}
+
 
 class Module:
-    """One file, one ground truth."""
+    """One file, one thing: a ground truth, or a signal."""
 
     __slots__ = ("type", "path", "rel")
 
@@ -62,9 +76,10 @@ class Module:
 
 
 def read(memory: Path, type_: str) -> list[Module]:
-    """Every module of one type. Not recursive: a directory under
-    `beliefs/` is a mistake rather than a nesting, and `check` says so
-    instead of the reader quietly inventing a hierarchy."""
+    """Every module of one type. Not recursive, and that is load-bearing
+    now that the layers nest: the directory under `beliefs/` is the next
+    layer down, not more beliefs. Anything else in there is a mistake,
+    and `check` says so instead of the reader inventing a hierarchy."""
     root = Path(memory) / HOMES[type_]
     return [Module(type_, path, path.relative_to(memory))
             for path in sorted(root.glob("*.md"))]
@@ -91,7 +106,7 @@ def render(memory: Path) -> list[str]:
         found = read(memory, type_)
         if not found:
             continue
-        out.append(f"{type_}s — ground truth, always true, not news:")
+        out.append(f"{type_}s — {LABELS[type_]}:")
         for module in found:
             out.append(f"  [{module.slug}]")
             for line in module.text().splitlines():

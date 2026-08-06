@@ -12,23 +12,29 @@ stopped moving and somebody was promised it wouldn't.
 
 ## the shape
 
-Two kinds of file. Context is flat and has no clock. Work nests under
-what it is a run of, and it is on one.
+An agent **has beliefs** — clean code means this, deploys work like
+that. It **is motivated** by signals from outside: somebody said
+something, two deploys broke prod, it's been eleven days without a
+restore drill. It keeps track of what it means to do about them in
+**intentions**, and it gets there, or doesn't, by pursuing a **goal** or
+firing off a one-shot **action**.
+
+The tree is that sentence, read downward:
 
     memory/
     ├── entrypoint/
     │   ├── rouse.md                   the instruction file — point your agent here
-    │   ├── beliefs/                   ground truth. Injected every session.
-    │   │   ├── belief-zero-downtime-deploys.md
-    │   │   └── belief-plan-before-code.md
-    │   ├── motivations/               what you're currently for. Same shape.
-    │   │   └── motivation-keep-the-deploy-trustworthy.md
-    │   └── intentions/                what you're doing. Records, with clocks.
-    │       └── 2026-03-14-migration-verified/
-    │           ├── intention.md
-    │           ├── verify.sh
-    │           └── run-it-on-the-branch/
-    │               └── task.md
+    │   └── beliefs/                   internal, timeless. Injected every session.
+    │       ├── belief-zero-downtime-deploys.md
+    │       ├── belief-plan-before-code.md
+    │       └── motivations/           external signals. Same shape, same injection.
+    │           ├── motivation-two-deploys-broke-prod.md
+    │           └── intentions/        what you're doing. Records, with clocks.
+    │               └── 2026-03-14-migration-verified/
+    │                   ├── intention.md
+    │                   ├── verify.sh
+    │                   └── run-it-on-the-branch/
+    │                       └── task.md
     └── inventory/                     everything with no position at all
         ├── notes/                     what you want to still know next week
         ├── probes.md                  commands whose output is the answer
@@ -36,19 +42,27 @@ what it is a run of, and it is on one.
         └── backlog/<slug>/backlog.md
 
 **Beliefs and motivations are a system prompt cut into modules.** One
-ground truth per file — "deployments always happen with no downtime",
-"writing code starts in plan mode" — no status, no clock, nothing nested
-inside, and all of them put in front of the model at the start of every
-session. One per file is the point, because a rule you can add, drop or
-hand to another agent on its own is a rule you will keep maintaining.
+ground truth per file, no status, no clock, and all of them put in front
+of the model at the start of every session. One per file is the point,
+because a rule you can add, drop or hand to another agent on its own is
+a rule you will keep maintaining. The difference between the two is
+where it came from: a belief is the agent's, and holds regardless of the
+week; a motivation *arrived*, and gets deleted when the signal stops
+mattering.
+
+**Those directories nest because the sentence does — not because the
+files contain each other.** No motivation belongs to a belief and no
+intention belongs to a motivation; there is no field for it and no
+per-item nesting, and an intention four directories deep still has
+nothing above it.
 
 **From `intentions/` down, a record is a directory containing
-`<type>.md`.** The type names the level; the path names what it is a run
-of. These are the ones with a contract about time — an intention is
-nudged when it stops moving, and ends `done` or `dropped` out loud,
-never by evaporating. A backlog item is never nudged at all, and pays
-for that by having no quiet exit either. Pick by the contract you want,
-not by how big the thing feels.
+`<type>.md`.** *There* the path really is the parent: the type names the
+level, the directory names what it is a run of. These are the ones with
+a contract about time — an intention is nudged when it stops moving, and
+ends `done` or `dropped` out loud, never by evaporating. A backlog item
+is never nudged at all, and pays for that by having no quiet exit
+either. Pick by the contract you want, not by how big the thing feels.
 
 Probes are the smaller third piece and they stop most of the damage: a
 named command whose output *is* the answer, whose reading beats any note

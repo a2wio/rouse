@@ -27,8 +27,8 @@ TEMPLATES: dict[str, tuple[list[tuple[str, str]], str]] = {
                "One ground truth about the world you work in, stated "
                "plainly and in the present tense.\n"),
     "motivation": ([("keywords", "")],
-                   "What you are currently for, and what it makes you do "
-                   "by default.\n"),
+                   "The signal that arrived, from outside: who said it or "
+                   "what happened, and what it is pressure to do.\n"),
     "intention": ([("status", "open"), ("opened", "{now}"),
                    ("last-moved", "{now}"), ("stale-after", "2h"),
                    ("closes-when", "")],
@@ -146,9 +146,10 @@ def promote(memory: Path, slug: str, under: str | None = None) -> Path:
 def render_tree(memory: Path) -> str:
     """What is on disk, in the three shapes it comes in.
 
-    The context layers list flat, because they are flat — a belief that
-    appeared to contain something would be the lineage this system
-    deliberately doesn't have. The records nest, which is the payoff of
+    The context layers list flat, because the items in them are flat —
+    the directories nest, one layer per level, but a belief that appeared
+    to contain a motivation would be the lineage this system deliberately
+    doesn't have. The records nest for real, which is the payoff of
     containment being the filesystem: who is a run of what, without
     opening a file.
     """

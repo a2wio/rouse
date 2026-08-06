@@ -8,40 +8,46 @@ Read this before writing anything into `memory/`.
 
 ## two kinds of thing in here
 
-    entrypoint/                what you mean
-      rouse.md                 this file
-      beliefs/                 what is true. Flat files, no clock.
+You have beliefs. You are motivated by signals that arrive from outside.
+You keep track of what you mean to do about them in intentions, and you
+get there by pursuing a goal or firing off a one-shot. The tree is that
+sentence:
+
+    entrypoint/                  what you mean
+      rouse.md                   this file
+      beliefs/                   what is true. Flat files, no clock.
         belief-<slug>.md
-      motivations/             what you're for. Same shape.
-        motivation-<slug>.md
-      intentions/              what you're doing. Records, with clocks.
-        <slug>/intention.md
-    inventory/                 everything with no position at all
-      notes/                   what you know and want to know next week
-      probes.md                commands whose output is the answer
-      reminders/<slug>/        promises on a clock
-      backlog/<slug>/          worth doing, not committed to
+        motivations/             what's pushing. Same shape, no clock.
+          motivation-<slug>.md
+          intentions/            what you're doing. Records, with clocks.
+            <slug>/intention.md
+    inventory/                   everything with no position at all
+      notes/                     what you know and want to know next week
+      probes.md                  commands whose output is the answer
+      reminders/<slug>/          promises on a clock
+      backlog/<slug>/            worth doing, not committed to
 
 **`beliefs/` and `motivations/` are context, not work.** One ground
-truth per file, flat, nothing nested inside. They have no status and no
-clock; nothing will ever nudge you about one. All of them are put in
-front of you at the start of every session — that is the whole
-mechanism, and one-per-file is the whole idea, because a rule you can
-add or drop without editing a wall of prose is a rule you will actually
-maintain.
+truth per file, flat. They have no status and no clock; nothing will
+ever nudge you about one. All of them are put in front of you at the
+start of every session — that is the whole mechanism, and one-per-file
+is the whole idea, because a rule you can add or drop without editing a
+wall of prose is a rule you will actually maintain.
 
     beliefs/belief-zero-downtime-deploys.md
-    motivations/motivation-keep-the-deploy-trustworthy.md
+    beliefs/motivations/motivation-two-deploys-broke-prod.md
 
-A motivation is why an intention exists. It says so in words, in its own
-body; there is no field and no directory linking the two, because the
+**The nesting is that sentence, not ownership.** No motivation belongs
+to a belief and no intention belongs to a motivation. A motivation is
+why an intention exists, and it says so in words, in its own body —
+there is no field and no per-item directory linking them, because the
 intention will close and the motivation will not.
 
 **From `intentions/` down, a record is a directory containing
-`<type>.md`.** The type names what it is; the path names what it is a
-run of.
+`<type>.md`.** *There* the path is the parent: the type names what it
+is, the directory names what it is a run of.
 
-    entrypoint/intentions/
+    …/intentions/
       2026-03-14-migration-verified/     ← an intention
         intention.md
         verify.sh                        ← its things live with it
@@ -134,18 +140,20 @@ ticks — if you find yourself wanting one of those, what you wanted was
 an intention. The header is optional and `keywords:` is the only thing
 in it, for grep.
 
-Write one when a rule turns out to hold generally: not "the staging
-deploy broke on Tuesday" (that is a note) but the thing you now expect
-to be true next time. **Keep them few and keep them separate** — one per
-file, because every session pays for all of them, and because the point
-of the split is that a rule can be dropped or handed to another agent on
-its own.
+**A belief is yours and it is timeless.** Write one when a rule turns
+out to hold generally: not "the staging deploy broke on Tuesday" (that
+is a note) but the thing you now expect to be true next time. **Keep
+them few and keep them separate** — one per file, because every session
+pays for all of them, and because the point of the split is that a rule
+can be dropped or handed to another agent on its own.
 
-A motivation is the same file in a different directory, and the
-difference is only what it is about: a belief is about the world, a
-motivation is about what you are currently for. It is what makes an
-intention worth having, and it says so in its own body — there is no
-field linking them, and there shouldn't be.
+**A motivation is a signal, and it came from outside you.** Somebody
+said something; a number crossed a line; it has been eleven days without
+the thing that should happen weekly. Same file format, one directory
+down, and it is the reason there is anything to do at all — an intention
+is your answer to one. The test: could this have been true before anyone
+said anything? Then it's a belief. Did it *arrive*? Then it's a
+motivation, and you delete it when it stops being what's pushing.
 
 ## intentions — you can't quietly drop one
 
@@ -153,7 +161,7 @@ Anything you said you'd do that has no other trigger — nobody will
 message you about it, no job will finish and remind you — goes in a
 record, in the same turn you say it:
 
-    entrypoint/intentions/2026-03-14-migration-verified/intention.md
+    …/intentions/2026-03-14-migration-verified/intention.md
 
     ---
     status: open
@@ -240,7 +248,7 @@ you catch yourself writing `stale-after: 30d` on an intention to keep it
 quiet, what you wanted was a backlog item.
 
 The price of the silence is that an item leaves in exactly two ways:
-**promoted** — the directory moves into `entrypoint/intentions/` and
+**promoted** — the directory moves into `…/intentions/` and
 becomes one — or **dropped out loud**. Never by quietly ceasing to
 exist.
 

@@ -52,7 +52,7 @@ Under the flat layout, promoting meant editing a field. Now it is what
 it always was underneath — the thing changes level, so it changes place:
 
     git mv inventory/backlog/pin-the-runner-version \
-           entrypoint/intentions/
+           entrypoint/beliefs/motivations/intentions/
     mv .../pin-the-runner-version/backlog.md .../intention.md
 
 and the header becomes an intention's: `status: open`, a fresh

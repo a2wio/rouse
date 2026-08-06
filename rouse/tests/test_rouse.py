@@ -143,6 +143,18 @@ class Walk(Tree):
         records = self.records()
         self.assertIsNone(records.parent(records.of("intention")[0]))
 
+    def test_the_nesting_of_the_level_directories_is_not_lineage(self):
+        """An intention sits three directories deep and still has nothing
+        above it. `beliefs/motivations/intentions/` is the sentence the
+        tree tells; a level directory is not a record, so no path can say
+        which motivation an intention answers."""
+        self.module("belief", "zero-downtime")
+        self.module("motivation", "denis-said-the-deploys-broke-twice")
+        self.rec(f"{LADDER}/i", "intention", {"status": "open"})
+        records = self.records()
+        self.assertEqual(len(records.all()), 1)
+        self.assertIsNone(records.parent(records.of("intention")[0]))
+
     def test_assets_beside_a_record_are_not_records(self):
         self.rec(f"{LADDER}/i", "intention", {"status": "open"})
         (self.memory / LADDER / "i" / "verify.sh").write_text("#!/bin/sh\n")
@@ -166,9 +178,10 @@ class Walk(Tree):
 
     def test_the_context_layers_are_not_records(self):
         """Nothing in the record walker knows beliefs exist — no status
-        to read, no clock to feed, nothing to nest under one."""
+        to read, no clock to feed, and no way for one to be somebody's
+        parent however deep the tree puts it."""
         self.module("belief", "zero-downtime-deploys")
-        self.module("motivation", "keep-the-deploy-trustworthy")
+        self.module("motivation", "two-deploys-broke-prod")
         self.assertEqual(self.records().all(), [])
 
 
@@ -204,6 +217,19 @@ class Context(Tree):
         nested.parent.mkdir(parents=True)
         nested.write_text("---\n---\n\nnested\n")
         self.assertEqual(context.read(self.memory, "belief"), [])
+
+    def test_the_layers_nest_by_exactly_one_directory_each(self):
+        self.assertTrue(layout.MOTIVATIONS.startswith(f"{layout.BELIEFS}/"))
+        self.assertTrue(layout.INTENTIONS.startswith(f"{layout.MOTIVATIONS}/"))
+
+    def test_a_motivation_is_not_read_as_a_belief_of_the_layer_above(self):
+        """The layers nest, the items in them don't: the reader of
+        `beliefs/` stops at the directory instead of descending into the
+        signals below it."""
+        self.module("belief", "zero-downtime")
+        self.module("motivation", "denis-said-the-deploys-broke-twice")
+        self.assertEqual([m.id for m in context.read(self.memory, "belief")],
+                         ["belief/zero-downtime"])
 
 
 class Due(Tree):
@@ -462,6 +488,14 @@ class Pack(Tree):
         self.module("belief", "x")
         self.assertIn("not news", pack.render(self.memory))
 
+    def test_a_motivation_is_labelled_as_a_signal_and_still_not_news(self):
+        """It is the one that really did arrive from outside, so it is
+        the one most likely to be answered as if it just had."""
+        self.module("motivation", "denis-said-so")
+        out = pack.render(self.memory)
+        self.assertIn("motivations — signals that arrived", out)
+        self.assertIn("not news", out)
+
     def test_the_layers_land_above_the_index_and_below_what_is_due(self):
         self.module("belief", "zero-downtime")
         self.note("x.md", {"keywords": "k"})
@@ -603,7 +637,24 @@ class Check(Tree):
         nested.parent.mkdir(parents=True)
         nested.write_text("---\n---\n\nnested\n")
         code, out = self.check()
-        self.assertIn("nothing sits under a ground truth", out)
+        self.assertIn("Nothing sits under a ground truth", out)
+
+    def test_the_layer_below_is_the_one_directory_that_belongs(self):
+        """`motivations/` inside `beliefs/` and `intentions/` inside
+        `motivations/` are the nesting; everything else in there is a
+        ground truth put inside a ground truth."""
+        (self.memory / layout.PROBES).write_text("")
+        self.module("belief", "zero-downtime")
+        self.module("motivation", "denis-said-so")
+        code, out = self.check()
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), "clean")
+
+    def test_a_stray_directory_under_motivations_is_flagged(self):
+        (self.memory / layout.PROBES).write_text("")
+        (self.memory / layout.MOTIVATIONS / "signals").mkdir(parents=True)
+        code, out = self.check()
+        self.assertIn("the only one that belongs here is intentions/", out)
 
     def test_too_much_context_is_flagged(self):
         (self.memory / layout.PROBES).write_text("")
@@ -659,7 +710,7 @@ class Skeleton(unittest.TestCase):
                          ["  example-plan-before-code",
                           "  example-zero-downtime-deploys"])
         self.assertIn("motivations:", out)
-        self.assertIn("  example-keep-the-deploy-trustworthy", out)
+        self.assertIn("  example-two-deploys-broke-prod", out)
         # and the record half nests, which the context half must not
         records = out[out.index("intention example-verify-the-staging-migration"
                                 "  [open]"):]

@@ -3,7 +3,8 @@ keywords: deploy, downtime, rollout, migrations, blue-green
 ---
 
 Placeholder — an example belief. Delete it, or rewrite it as one of
-yours; it is a flat file and nothing sits under it.
+yours; it is a flat file, and the only thing in `beliefs/` that isn't a
+file like this one is `motivations/`, the layer below.
 
 Deployments always happen with no downtime. A rollout that needs a
 maintenance window is a rollout that has gone wrong somewhere earlier —

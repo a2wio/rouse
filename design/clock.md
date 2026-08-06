@@ -116,8 +116,8 @@ exec: non-2xx means not delivered.
 The record's body, plus three facts the model cannot infer: which level
 this is, how long it has sat still, and which nudge number this is.
 
-    intention/2026-03-14-migration-verified — nudge 2, last moved 4h ago
-    at: entrypoint/intentions/2026-03-14-migration-verified
+    intention/migration-verified — nudge 2, last moved 4h ago
+    at: entrypoint/beliefs/motivations/intentions/migration-verified
     closes-when: the staging migration has run once with me watching
 
     <the body>

@@ -18,23 +18,33 @@ it.
     memory/
       entrypoint/
         rouse.md
-        beliefs/       belief-<slug>.md          flat, no clock, injected
-        motivations/   motivation-<slug>.md      flat, no clock, injected
-        intentions/    <slug>/intention.md       records, with clocks
+        beliefs/           belief-<slug>.md        flat, no clock, injected
+          motivations/     motivation-<slug>.md    flat, no clock, injected
+            intentions/    <slug>/intention.md     records, with clocks
       inventory/
         notes/  probes.md  reminders/  backlog/
 
 `beliefs/` and `motivations/` are one ground truth per file and nothing
-else — no status, no clock, no lifecycle, nothing nested inside. The
-pack puts all of them in front of the model at the start of every
-session; they are a system prompt cut into modules, and the modules are
-the point. See `ladder.md`.
+else — no status, no clock, no lifecycle. A belief is internal and
+timeless; a motivation is an external signal that arrived. The pack puts
+all of them in front of the model at the start of every session; they
+are a system prompt cut into modules, and the modules are the point. See
+`ladder.md`.
+
+**The nesting of those directories is a sentence, not containment.** An
+agent has beliefs, is motivated by signals, keeps track in intentions.
+Reading down the path reads that. It does not say that a motivation
+belongs to a belief or that an intention belongs to a motivation —
+nothing says that, and an implementation must not infer it. Exactly one
+directory is legal inside each layer, and it is the layer below.
 
 **A record is a directory containing `<type>.md`.** From `intentions/`
-down. The type names the level — `intention`, `goal`, `action`, `task`,
-`reminder`, `backlog` — and the directory it sits in names its parent.
+down — that is where path-is-parent starts, because that is where the
+things in the path are records. The type names the level — `intention`,
+`goal`, `action`, `task`, `reminder`, `backlog` — and the directory it
+sits in names its parent.
 
-    entrypoint/intentions/verify-it/run-it-on-the-branch/task.md
+    …/intentions/verify-it/run-it-on-the-branch/task.md
 
 is a task, and what it is a run of is the intention above it, and
 nothing in any header says so. Containment used to be a `parent:` field;
@@ -95,7 +105,9 @@ Four things, and nothing else is required:
    bodies that belong in a pack.
 2. **Walk and parse.** Find every `<type>.md`, read the header subset
    above, and take each record's parent to be the nearest enclosing
-   record directory.
+   *record* directory. `beliefs/`, `motivations/` and `intentions/` are
+   not records, so a top-level intention has no parent however deep the
+   path is.
 3. **Compute due** — `due_at = max(last-moved, swept, the level's own
    clock) + stale-after`, floored at 15 minutes, and never for a record
    with something open under it.

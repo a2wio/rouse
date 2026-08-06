@@ -205,16 +205,28 @@ CONTEXT_BUDGET = 8000
 
 def _context(memory: Path) -> list[str]:
     """Lint the two static layers. They have no clock, so almost nothing
-    can be wrong with one — which leaves exactly three things that can."""
+    can be wrong with one — which leaves exactly three things that can.
+
+    The layers nest by one directory each — `motivations/` inside
+    `beliefs/`, `intentions/` inside `motivations/` — and that one is
+    legal. Any other directory in there is somebody putting a ground
+    truth inside a ground truth.
+    """
     warnings = []
     for type_ in layout.CONTEXT:
         root = memory / context.HOMES[type_]
-        for path in sorted(root.rglob("*.md")):
+        if not root.is_dir():
+            continue
+        for path in sorted(root.iterdir()):
             where = path.relative_to(memory)
-            if path.parent != root:
-                warnings.append(f"{where}: nested inside {type_}s/ — these "
-                                "are flat files, and nothing sits under a "
-                                "ground truth")
+            if path.is_dir():
+                if path.name != layout.NESTS[type_]:
+                    warnings.append(
+                        f"{where}: a directory inside {type_}s/ — the only "
+                        f"one that belongs here is {layout.NESTS[type_]}/, "
+                        "the layer below. Nothing sits under a ground truth")
+                continue
+            if path.suffix != ".md":
                 continue
             if not path.stem.startswith(f"{type_}-"):
                 warnings.append(f"{where}: name it {type_}-{path.stem}.md, so "

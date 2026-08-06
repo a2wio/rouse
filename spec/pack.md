@@ -19,11 +19,11 @@ tokens, and spend them on pointers rather than content.
       disk-free: <unknown>
 
     due: 2 record(s) want you
-      intention/2026-03-14-migration-verified — 4h ago
-        at: entrypoint/intentions/2026-03-14-migration-verified
+      intention/migration-verified — 4h ago
+        at: entrypoint/beliefs/motivations/intentions/migration-verified
         closes-when: the staging migration has run once with me watching
-      action/2026-03-12-ask-about-the-rollback — 2d ago
-        at: entrypoint/intentions/2026-03-14-migration-verified/ask-about-it
+      action/ask-about-the-rollback — 2d ago
+        at: entrypoint/beliefs/motivations/intentions/migration-verified/ask-about-it
 
     beliefs — ground truth, always true, not news:
       [zero-downtime-deploys]
@@ -34,10 +34,10 @@ tokens, and spend them on pointers rather than content.
       Writing code starts in plan mode. Say what the change is, which
       files it touches, and how it will be checked — then write it.
 
-    motivations — ground truth, always true, not news:
-      [keep-the-deploy-trustworthy]
-      The pipeline should be evidence that something ran, not a vibe
-      that it probably did.
+    motivations — signals that arrived — standing context, not news:
+      [two-deploys-broke-prod]
+      Two deploys broke prod this month and the operator said they no
+      longer trust a green check on this pipeline.
 
     ladder: 4 intentions · 1 goal · 2 tasks
 
@@ -71,7 +71,9 @@ tier 1 — no daemon — this block *is* the clock: overdue records surface
 at the top of every session rather than never.
 
 **4. The context layers, in full.** Every file in `beliefs/` and
-`motivations/`, body and all. This is the one place the pack carries
+`motivations/`, body and all — one non-recursive pass each, since
+`motivations/` sits inside `beliefs/` and a recursive read would print
+it twice. This is the one place the pack carries
 content rather than pointers, and the reason is that these files have no
 clock and no lifecycle: there is no fresher version of one to go and
 read, so a copy in the window cannot drift from the file. They are the

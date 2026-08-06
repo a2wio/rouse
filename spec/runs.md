@@ -17,7 +17,7 @@ file.
 
 A task lives **inside the record it is a run of**:
 
-    entrypoint/intentions/
+    entrypoint/beliefs/motivations/intentions/
       2026-03-14-migration-verified/     the intention
         intention.md
         run-it-on-the-branch/            the task
@@ -40,7 +40,7 @@ diff, the screenshots — belongs in that same directory rather than in a
 scratch space nobody looks in again.
 
 A task with nothing above it is legal and sits at the top of
-`entrypoint/intentions/`: it is a job that is a run of nothing in
+`…/intentions/`: it is a job that is a run of nothing in
 particular.
 
 The lifecycle is the contract:

@@ -7,8 +7,16 @@ So it sits, and the operator finds out by asking.
 The ladder is the fix, and it is one sentence: **not moving is a trigger
 too.**
 
-    belief      ground truth. No clock, ever.        ┐ context: flat files,
-    motivation  what you are currently for.          ┘ injected every session
+The five levels are one sentence too. An agent — its system prompt, plus
+`rouse.md` — **has beliefs**: clean code means this, deploys work like
+that. It **is motivated** by signals from outside: somebody said
+something, it has been eleven days without a restore drill. It keeps
+track of what it means to do about them in **intentions**, and it gets
+there, or doesn't, by pursuing a **goal** or firing off a one-shot
+**action**.
+
+    belief      internal, timeless. What is true.     ┐ context: flat files,
+    motivation  external, momentary. A signal.        ┘ injected every session
 
     intention   what you mean to make true. Nudged when it stops moving.
       goal      a loop with a success condition.
@@ -16,22 +24,23 @@ too.**
 
 Five levels, with a line across the middle. **Beliefs and motivations
 are context. Intentions and down are records.** Treating those as one
-kind of thing is the mistake this spec is written against, and the
-indentation above is the trap: the bottom three nest in the filesystem
-and the top two do not nest in anything.
+kind of thing is the mistake this spec is written against.
 
 ---
 
 ## the context half — `beliefs/` and `motivations/`
 
-Flat files, one ground truth each:
+Flat files, one ground truth each. The two directories nest, and the
+files inside them never do:
 
     entrypoint/
       beliefs/
         belief-zero-downtime-deploys.md
         belief-plan-before-code.md
-      motivations/
-        motivation-keep-the-deploy-trustworthy.md
+        motivations/
+          motivation-two-deploys-broke-prod.md
+          intentions/
+            2026-03-14-migration-verified/…
 
     ---
     keywords: deploy, downtime, rollout, migrations
@@ -39,11 +48,10 @@ Flat files, one ground truth each:
     Deployments always happen with no downtime. A rollout that needs a
     maintenance window is a rollout that went wrong earlier.
 
-**No status. No clock. No lifecycle. Nothing nested inside.** Nothing
-sweeps one, nothing nudges about one, and there is no `done` for a thing
-that is simply true. The header is optional, `keywords:` is the only
-field anything reads, and it is there for grep rather than for a
-machine.
+**No status. No clock. No lifecycle.** Nothing sweeps one, nothing
+nudges about one, and there is no `done` for a thing that is simply
+true. The header is optional, `keywords:` is the only field anything
+reads, and it is there for grep rather than for a machine.
 
 **The pack injects all of them, whole, at the start of every session.**
 That is the entire mechanism. These files are a system prompt cut into
@@ -52,22 +60,60 @@ be added, dropped, reviewed, or handed to a second agent without editing
 a wall of prose, and it means the diff on a rule change is one line
 rather than a paragraph.
 
-The two directories differ only in what their files are about. A belief
-is about the world: how deploys behave, what a green check means, how
-this team works. A motivation is about what you are currently trying to
-be true to, which makes it the shorter-lived of the two and makes it the
-thing an intention serves.
+### belief — internal and timeless
+
+What is true about the world you work in, regardless of the week.
+Deployments happen with no downtime. Writing code starts in plan mode. A
+belief is the agent's own, it has no author outside the file, and it
+does not expire — it gets rewritten when it turns out to be wrong, which
+is what `outcome: contradicts` is for.
+
+### motivation — external and momentary
+
+**A signal, written down.** Somebody said something; a number crossed a
+line; two deploys broke prod; it has been eleven days without a restore
+drill. A motivation is the *reason there is anything to do at all*, and
+it comes from outside the agent — which is exactly what makes it the
+shorter-lived of the two. When the signal stops mattering, the file is
+deleted, and nothing mourns it.
+
+The test between the two: could this have been true before anyone said
+anything? Then it is a belief. Did it *arrive*? Then it is a motivation.
+
+In v0 a motivation is prose and has no clock, like a belief. **It is
+written to grow one.** A signal of the form "it's been N days without X"
+is a predicate a sweeper could evaluate, and a later version may put it
+in the header — `signal: 11d since restore-drill` — and wake somebody
+when it fires. Nothing in this spec should have to change for that:
+today the sentence is in the body, and the clock reads nothing.
 
 **A motivation holds an intention semantically, not in the filesystem.**
 It says why the intention exists, in its own body, in words. There is no
-`motivation:` field on an intention and no directory nesting one inside
-the other. Adding either costs something specific: the intention closes
-and the motivation doesn't, so the link spends most of its life pointing
-at something finished. If you want the connection written down, write
-the sentence.
+`motivation:` field on an intention and no per-item directory nesting.
+Adding either costs something specific: the intention closes and the
+motivation doesn't, so the link spends most of its life pointing at
+something finished. If you want the connection written down, write the
+sentence.
 
-There is no orphan rule. Nothing is above an intention, so nothing can
-be missing above it.
+There is no orphan rule. Nothing is above an intention *in the
+filesystem*, so nothing can be missing above it.
+
+### the nesting is the sentence, not containment
+
+`beliefs/` holds belief files and one directory, `motivations/`. That
+one holds motivation files and one directory, `intentions/`. Reading
+down the path reads the sentence at the top of this file, which is the
+entire reason the directories sit that way.
+
+**Nothing else may be read into it.** `beliefs/motivations/…` does not
+mean this motivation belongs to some belief; there is no belief there to
+belong to. An intention four directories deep still has no parent, and
+an implementation walking the tree must not invent one — a level
+directory is not a record, and path-is-parent (below) starts at
+`intentions/` and applies only between records. The linter allows
+exactly one directory inside each layer, by name, and flags any other:
+a directory inside `beliefs/` called anything but `motivations/` is
+somebody nesting a ground truth inside a ground truth.
 
 **Naming.** `belief-<slug>.md`, `motivation-<slug>.md`. The prefix
 repeats the directory on purpose, so the file still says what it is
@@ -85,7 +131,7 @@ tokens of context is doing you a favour.
 **A record is a directory containing `<type>.md`.** The type names the
 level; the directory it sits in names its parent.
 
-    entrypoint/intentions/
+    entrypoint/beliefs/motivations/intentions/
       2026-03-14-migration-verified/            intention
         intention.md
         verify.sh
@@ -145,7 +191,11 @@ rather than never.
 
 ## intentions — `intention.md`
 
-The load-bearing level, and the top of the record half.
+The load-bearing level, and the top of the record half. **An intention
+is the agent's own answer to a signal**: the motivation is the pressure
+that arrived, and this is the ledger entry saying what it means to do
+about it and how it will know it is finished. Everything below is how it
+gets there.
 
     ---
     status: open              open | done | dropped
@@ -248,8 +298,8 @@ task under it and no outcome on it.
 ## the defaults, in one table
 
     level         stale-after   own clock                  ends
-    belief        —             —                          (deleted, or rewritten)
-    motivation    —             —                          (deleted, or rewritten)
+    belief        —             —                          (rewritten when contradicted)
+    motivation    —             —                          (deleted when the signal stops)
     intention     2h            —                          done / dropped
     goal          1h            last ending underneath      done / abandoned
     action        1d            —                          done / dropped (+ outcome)
