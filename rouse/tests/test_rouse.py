@@ -683,6 +683,33 @@ class Pack(Tree):
         self.assertNotIn("pay the invoice", buf.getvalue())
         self.assertIn("[invoice-unpaid]", buf.getvalue())
 
+    def test_the_ladder_counts_say_where_the_counted_things_are(self):
+        """A count with no path reads as a pointer to nothing. Found in a
+        live session, which went hunting for a file called `ladder`."""
+        self.rec(f"{LADDER}/i", "intention", {"status": "open"})
+        self.rec(f"{LADDER}/i/t", "task", {"status": "pending"})
+        out = pack.render(self.memory)
+        self.assertIn("ladder: 1 intention · 1 task", out)
+        self.assertIn(f"under {LADDER}/", out)
+
+    def test_a_nested_reminder_is_not_pointed_at_the_inventory(self):
+        """The roots come off the records, not off each level's default
+        home — a reminder can live inside the thing it belongs to."""
+        self.rec(f"{LADDER}/i", "intention", {"status": "open"})
+        self.rec(f"{LADDER}/i/ping", "reminder",
+                 {"status": "pending", "due": stamp(HOUR)})
+        out = pack.render(self.memory)
+        self.assertIn("1 intention · 1 reminder", out)
+        self.assertIn(f"under {LADDER}/", out)
+        self.assertNotIn(layout.REMINDERS, out)
+
+    def test_both_roots_are_named_when_records_sit_in_both(self):
+        self.rec(f"{LADDER}/i", "intention", {"status": "open"})
+        self.rec(f"{layout.REMINDERS}/pay", "reminder",
+                 {"status": "pending", "due": stamp(HOUR)})
+        out = pack.render(self.memory)
+        self.assertIn(f"under {LADDER}/, {layout.REMINDERS}/", out)
+
     def test_the_persona_goes_in_whole_above_the_beliefs(self):
         self.persona(body="You talk like a front-end dev in a hurry.")
         self.module("belief", "no-framework", body="A static page needs none.")
@@ -1178,6 +1205,22 @@ class Skeleton(unittest.TestCase):
             code = cli.main(["check", "--memory", str(self.memory)])
         self.assertEqual(code, 0)
         self.assertNotIn("error:", buf.getvalue())
+
+    def test_it_tells_the_agent_a_note_is_not_where_a_promise_goes(self):
+        """The one thing a live session got wrong: it put "not checked
+        yet" in a note body, where nothing sweeps it and nothing ever
+        comes due. Both halves of the boundary have to be in the file."""
+        # the prose is hard-wrapped, so match fragments, not sentences
+        text = " ".join((self.memory / layout.INSTRUCTIONS).read_text().split())
+        self.assertIn("in the future tense, it is not a note", text)
+        self.assertIn("The tell is tense.", text)
+        text = (self.memory / layout.INSTRUCTIONS).read_text()
+        # and the boundary is stated in the section that wins, which is
+        # the one telling it to write notes at the end of every turn
+        notes = text.index("## notes")
+        self.assertLess(notes, text.index("It is not where an unfinished"))
+        self.assertLess(text.index("It is not where an unfinished"),
+                        text.index("## probes"))
 
     def test_it_ships_no_persona_because_it_could_not_be_marked_as_one(self):
         """Every other example carries `example-` in its name and

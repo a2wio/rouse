@@ -43,7 +43,8 @@ tokens, and spend them on pointers rather than content.
       Two deploys broke prod this month and the operator said they no
       longer trust a green check on this pipeline.
 
-    ladder: 4 intentions · 1 goal · 2 tasks
+    ladder: 4 intentions · 1 goal · 2 tasks — the open ones are under
+      entrypoint/beliefs/motivations/intentions/
 
     fresh memory (read what's relevant):
       inventory/notes/projects/api.md (2h ago — postgres, migrations,
@@ -108,6 +109,16 @@ the same reader that later needs them.
 reach it. Never let the pack imply it is complete — an agent that thinks
 the pack is the memory will never grep, and grep is most of the
 retrieval.
+
+**Every count in the pack names where the counted things are.** That
+applies to the `ladder:` line as much as to the notes index, and it was
+learned the hard way: counts on their own read as a pointer, and when
+nothing is due there is no other route to a record, so a model told
+`1 intention · 1 task` and given no path goes looking for a file called
+`ladder`. The roots on the line cost eleven words and are read off the
+records rather than off each level's default home — a reminder can sit
+inside the intention it belongs to, and then the inventory is the wrong
+place to send anybody.
 
 ## the query — the rules always, the signals when they're about this
 

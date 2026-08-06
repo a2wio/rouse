@@ -30,6 +30,10 @@ from . import context, files, layout, levels, probes
 FRESH_S = 36 * 3600      # listed in full above this age
 MAX_OLDER = 60           # lines before the older list is truncated
 
+# where a record can be, for the `ladder:` line to point at. Fixed order,
+# so the same tree renders the same pack twice.
+ROOTS = (layout.INTENTIONS, layout.REMINDERS, layout.BACKLOG)
+
 
 def render(memory: Path, *, budget_ms: int = probes.BUDGET_MS,
            now: float | None = None, query: str | None = None) -> str:
@@ -75,15 +79,33 @@ def _due(records: levels.Records, now: float) -> list[str]:
 
 
 def _ladder(records: levels.Records) -> list[str]:
-    """Counts only — the records themselves are reached through `due:`
-    and through the paths in it. The context layers are not counted here
-    because they were just printed in full."""
-    parts = []
+    """Counts, and where the counted things are.
+
+    Counts alone were the first version and they were a dead end: when
+    nothing is due, `1 intention · 1 task` names records the pack gives no
+    route to, and a model that wants to look goes hunting for a file
+    called `ladder` — which is the same failure as an index that implies
+    it is complete. So the roots go on the line. The context layers are
+    not counted here because they were just printed in full.
+    """
+    parts, found = [], set()
     for name in (*layout.LADDER, *layout.RUNS):
         open_ = [r for r in records.of(name) if not levels.closed(r)]
-        if open_:
-            parts.append(f"{len(open_)} {name}{'s' if len(open_) > 1 else ''}")
-    return [f"ladder: {' · '.join(parts)}", ""] if parts else []
+        if not open_:
+            continue
+        parts.append(f"{len(open_)} {name}{'s' if len(open_) > 1 else ''}")
+        # read off the records rather than off the type's default home: a
+        # reminder may sit inside the intention it belongs to, and then the
+        # inventory is the wrong place to send somebody looking
+        for rec in open_:
+            found |= {root for root in ROOTS
+                      if str(rec.rel).startswith(f"{root}/")}
+    if not parts:
+        return []
+    roots = [f"{root}/" for root in ROOTS if root in found]
+    return [f"ladder: {' · '.join(parts)}"
+            + (f" — the open ones are under {', '.join(roots)}" if roots
+               else ""), ""]
 
 
 def notes(memory: Path) -> list[Path]:

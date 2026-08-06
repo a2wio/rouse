@@ -107,6 +107,15 @@ error strings, names, numbers.
 API is on v3" is true today and silently wrong tomorrow. Either date it
 ("2026-03-14: the API was on v3 when…") or give it a probe.
 
+**A note is what you learned. It is not where an unfinished thing goes.**
+Nothing sweeps a note and nothing ever comes due out of one, so a
+sentence in a body saying "not checked yet" or "last step before this is
+done" is the open loop written into the one place that cannot close it —
+and it reads like diligence, which is why it happens. Write the note for
+what you now know, and put the unfinished half in an intention, in the
+same turn. **If the sentence you are about to write is in the future
+tense, it is not a note.**
+
 A note is a plain file. One that acquires a screenshot or a script
 becomes a directory holding `note.md`, like everything else here.
 
@@ -231,6 +240,12 @@ quiet drop is the one failure this whole directory exists to stop.
 
 Not everything you say gets a record. An intention is something you'd be
 embarrassed to have silently abandoned.
+
+**The tell is tense.** "The nav is sticky and reuses the palette" is a
+note — it happened. "I still have to look at it at phone width before
+it's done" is an intention, and putting that in a note body instead is
+the quiet drop this level exists to stop. It is the easiest one to miss,
+because writing it down at all feels like having handled it.
 
 `swept:` and `nudges:` are not yours. Leave them alone.
 
