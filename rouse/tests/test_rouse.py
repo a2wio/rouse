@@ -57,6 +57,14 @@ class Tree(unittest.TestCase):
         path.write_text(f"---\n{head}\n---\n\n{body}\n")
         return path
 
+    def persona(self, body: str = "short answers, no hedging",
+                header: dict | None = None) -> Path:
+        """The voice: one file at the root, no slug, or none at all."""
+        path = self.memory / layout.PERSONA
+        head = "\n".join(f"{k}: {v}" for k, v in (header or {}).items())
+        path.write_text(f"---\n{head}\n---\n\n{body}\n")
+        return path
+
     def note(self, rel: str, header: dict, body: str = "the body") -> Path:
         path = self.memory / layout.NOTES / rel
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -238,6 +246,48 @@ class Context(Tree):
                          ["belief/zero-downtime"])
 
 
+class Persona(Tree):
+    """The optional layer above the other two: one file, no clock, and a
+    tree without it is a tree, not a tree missing something."""
+
+    def test_it_is_one_file_at_the_root(self):
+        self.persona()
+        module = context.persona(self.memory)
+        self.assertEqual(module.path, self.memory / "persona.md")
+        self.assertEqual(module.type, "persona")
+
+    def test_no_persona_is_an_answer_and_not_a_problem(self):
+        self.assertIsNone(context.persona(self.memory))
+        self.assertEqual(context.render(self.memory), [])
+
+    def test_it_leads_the_context_block(self):
+        """Not by importance — by reading order: who is talking, what
+        they hold true, what reached them."""
+        self.persona(body="you are terse")
+        self.module("belief", "plan-first", body="plan before code")
+        self.module("motivation", "client-waiting", body="they want it friday")
+        out = "\n".join(context.render(self.memory))
+        self.assertLess(out.index("you are terse"), out.index("plan before"))
+        self.assertLess(out.index("plan before"), out.index("they want it"))
+
+    def test_it_counts_as_a_layer_for_whatever_adds_up_the_bill(self):
+        self.persona()
+        self.module("belief", "x")
+        self.assertEqual([m.type for m in context.layers(self.memory)],
+                         ["persona", "belief"])
+
+    def test_it_is_not_a_record_however_hard_the_walker_looks(self):
+        self.persona(header={"status": "open"})
+        self.assertEqual(levels.Records(self.memory).all(), [])
+        self.assertEqual(levels.due(self.records()), [])
+
+    def test_it_has_no_slug_to_print_because_there_is_one_of_it(self):
+        self.persona(body="you are terse")
+        out = "\n".join(context.render(self.memory))
+        self.assertIn("persona — how you talk", out)
+        self.assertNotIn("[persona]", out)
+
+
 class Matching(Tree):
     """`pack --query`: which motivations are spent in full.
 
@@ -310,6 +360,14 @@ class Matching(Tree):
         self.assertIn("prod broke twice", out)
         self.assertIn("pay the invoice", out)
         self.assertNotIn("not matched", out)
+
+    def test_the_persona_is_never_gated_either(self):
+        """One step past the belief argument: an agent asked about
+        invoices is not thereby a different agent."""
+        self.persona(body="you are terse and you never hedge")
+        out = "\n".join(context.render(self.memory,
+                                       query="nothing to do with any of it"))
+        self.assertIn("you are terse and you never hedge", out)
 
     def test_an_empty_query_is_no_query(self):
         self.motivation("invoice-unpaid", "invoice", body="pay the invoice")
@@ -625,6 +683,18 @@ class Pack(Tree):
         self.assertNotIn("pay the invoice", buf.getvalue())
         self.assertIn("[invoice-unpaid]", buf.getvalue())
 
+    def test_the_persona_goes_in_whole_above_the_beliefs(self):
+        self.persona(body="You talk like a front-end dev in a hurry.")
+        self.module("belief", "no-framework", body="A static page needs none.")
+        out = pack.render(self.memory)
+        self.assertIn("You talk like a front-end dev in a hurry.", out)
+        self.assertLess(out.index("persona —"), out.index("beliefs —"))
+
+    def test_a_tree_with_no_persona_prints_no_empty_block(self):
+        self.module("belief", "x")
+        out = pack.render(self.memory)
+        self.assertNotIn("persona", out)
+
     def test_a_note_with_assets_is_indexed_by_its_directory(self):
         self.note("shipping/note.md", {"keywords": "shipping, ship"})
         (self.memory / layout.NOTES / "shipping" / "shot.png").write_bytes(b"x")
@@ -723,6 +793,33 @@ class Scaffold(Tree):
                           "intention i  [open]",
                           "  task t  [pending]"])
 
+    def test_new_persona_writes_the_root_file_with_an_empty_fence(self):
+        path = scaffold.new(self.memory, "persona")
+        self.assertEqual(path, self.memory / layout.PERSONA)
+        self.assertEqual(files.head(path), {})
+        self.assertEqual(scaffold.blanks(path), [])
+
+    def test_the_persona_takes_no_name(self):
+        """One voice per tree, said with a path. Two of them is two
+        agents, and the second one wants its own tree."""
+        with self.assertRaises(ValueError) as caught:
+            scaffold.new(self.memory, "persona", "friendly")
+        self.assertIn("one voice per tree", str(caught.exception))
+
+    def test_the_persona_cannot_be_put_under_anything(self):
+        with self.assertRaises(ValueError):
+            scaffold.new(self.memory, "persona", None, "some-intention")
+
+    def test_a_record_still_needs_a_name(self):
+        with self.assertRaises(ValueError):
+            scaffold.new(self.memory, "intention")
+
+    def test_the_tree_says_there_is_a_persona_and_nothing_when_there_isnt(self):
+        self.module("belief", "zero-downtime")
+        self.assertNotIn("persona", scaffold.render_tree(self.memory))
+        self.persona()
+        self.assertIn("persona (how you talk", scaffold.render_tree(self.memory))
+
 
 class Check(Tree):
     def check(self):
@@ -779,6 +876,59 @@ class Check(Tree):
         code, out = self.check()
         self.assertEqual(code, 0)
         self.assertEqual(out.strip(), "clean")
+
+    def test_no_persona_is_never_a_finding(self):
+        """Optional is a rule. A tree without one is clean, and this is
+        the test that stops somebody helpfully warning about it."""
+        (self.memory / layout.PROBES).write_text("")
+        self.module("belief", "x")
+        code, out = self.check()
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), "clean")
+
+    def test_a_persona_with_a_clock_is_flagged(self):
+        (self.memory / layout.PROBES).write_text("")
+        self.persona(header={"status": "open", "stale-after": "7d"})
+        code, out = self.check()
+        self.assertEqual(code, 0)
+        self.assertIn("status, stale-after in a persona", out)
+
+    def test_keywords_on_a_persona_are_flagged(self):
+        (self.memory / layout.PROBES).write_text("")
+        self.persona(header={"keywords": "voice, tone"})
+        code, out = self.check()
+        self.assertEqual(code, 0)
+        self.assertIn("keywords on a persona — nothing reads them", out)
+
+    def test_a_persona_anywhere_but_the_root_is_flagged(self):
+        """It parses, it reads like the real thing, and nothing injects
+        it — the layer is a fixed path."""
+        (self.memory / layout.PROBES).write_text("")
+        (self.memory / layout.ENTRYPOINT / "persona.md").write_text(
+            "---\n---\n\nyou are terse\n")
+        code, out = self.check()
+        self.assertEqual(code, 0)
+        self.assertIn("the persona is one file at the tree root", out)
+
+    def test_a_persona_at_the_root_is_clean(self):
+        (self.memory / layout.PROBES).write_text("")
+        self.persona()
+        code, out = self.check()
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), "clean")
+
+    def test_the_persona_is_paid_for_out_of_the_same_budget(self):
+        """One number for all three layers: what is being defended is the
+        per-turn bill, which doesn't care which file it came from."""
+        (self.memory / layout.PROBES).write_text("")
+        self.persona(body="v" * 5000)
+        for i in range(4):
+            self.module("belief", f"long-{i}", body="b" * 1000)
+        code, out = self.check()
+        self.assertEqual(code, 0)
+        self.assertIn("If everything is a belief, nothing is", out)
+        self.assertIn("persona", out)
+        self.assertIn("belief", out)
 
     def test_a_directory_under_beliefs_is_flagged(self):
         (self.memory / layout.PROBES).write_text("")
@@ -1028,6 +1178,18 @@ class Skeleton(unittest.TestCase):
             code = cli.main(["check", "--memory", str(self.memory)])
         self.assertEqual(code, 0)
         self.assertNotIn("error:", buf.getvalue())
+
+    def test_it_ships_no_persona_because_it_could_not_be_marked_as_one(self):
+        """Every other example carries `example-` in its name and
+        `rouse.md` can say never to act on those. The persona is found by
+        path, so a placeholder would have to be called `persona.md` — an
+        unmarked instruction about how to talk, in a tree ten seconds
+        old. So the layer is documented and `init` says it exists."""
+        self.assertFalse((self.memory / layout.PERSONA).exists())
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            cli.main(["init", str(self.dir / "second")])
+        self.assertIn("rouse new persona", buf.getvalue())
 
 
 if __name__ == "__main__":

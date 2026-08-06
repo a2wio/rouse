@@ -1,10 +1,11 @@
-"""The static layers: beliefs and motivations.
+"""The static layers: the persona, the beliefs, the motivations.
 
 Everything else in this package is a record — it has a status, a clock,
-and two ways of ending. These two have none of that. They are context,
-and the only thing that ever happens to one is that a person writes it
-or deletes it.
+and two ways of ending. These have none of that. They are context, and
+the only thing that ever happens to one is that a person writes it or
+deletes it.
 
+    persona.md
     beliefs/belief-zero-downtime-deploys.md
     beliefs/motivations/motivation-two-deploys-broke-prod.md
 
@@ -33,6 +34,14 @@ up, and a field nothing reads is a field that will be filled in wrong. A
 motivation carries `keywords:`, and what reads them is `pack --query` —
 a signal only matters when it is relevant, and a rule binds whether you
 retrieved it or not.
+
+**The persona is the third one, and most trees don't have it.** One file
+at the root, `persona.md`, saying how this agent talks — the register,
+the length, what it never sounds like. It is above the other two rather
+than beside them because it is what they are read through: the same
+belief produces a different sentence in a different voice. It has no
+slug, no clock and no keywords, it is never gated by a query, and its
+absence is not a finding — see `spec/persona.md`.
 """
 
 import re
@@ -42,6 +51,11 @@ from pathlib import Path
 from . import files, layout
 
 HOMES = {"belief": layout.BELIEFS, "motivation": layout.MOTIVATIONS}
+
+# the whole of the persona layer: one path. It is not in HOMES because it
+# is a file rather than a directory of files, and everything that would
+# glob a layer would have to special-case it.
+PERSONA = "persona"
 
 # the layers that `pack --query` may collapse. Beliefs are not in it and
 # must not be: a rule you failed to retrieve still binds, so gating one
@@ -53,11 +67,12 @@ GATED = ("motivation",)
 # is one word here, not two.
 SPLIT = re.compile(r"[^a-z0-9-]+")
 
-# how each layer announces itself in the pack. Both end the same way and
-# have to: a paragraph at the top of a session reads as something that
+# how each layer announces itself in the pack. All three end the same way
+# and have to: a paragraph at the top of a session reads as something that
 # just came in, and a motivation — which really did arrive once — is the
 # one most likely to be replied to as if it just had.
-LABELS = {"belief": "ground truth, always true, not news",
+LABELS = {"persona": "how you talk, not what you know — not news",
+          "belief": "ground truth, always true, not news",
           "motivation": "signals that arrived — standing context, not news"}
 
 
@@ -130,8 +145,26 @@ def read(memory: Path, type_: str) -> list[Module]:
             for path in sorted(root.glob("*.md"))]
 
 
+def persona(memory: Path) -> Module | None:
+    """The voice, if this agent has one written down.
+
+    `None` is an ordinary answer and not a problem: a repo-scoped agent
+    inherits its register from whatever wraps it, and inventing a
+    personality for one would be a worse default than having none. So
+    nothing here warns, and the pack simply prints one block fewer.
+    """
+    path = Path(memory) / layout.PERSONA
+    return (Module(PERSONA, path, Path(layout.PERSONA))
+            if path.is_file() else None)
+
+
 def layers(memory: Path) -> list[Module]:
-    found = []
+    """Every context module in the tree, in the order the pack prints
+    them: the persona if there is one, then the beliefs, then the
+    motivations. Callers that only want the flat layers filter on
+    `.type` — but the one that adds up what a session costs wants all
+    three, because a session pays for all three."""
+    found = [module] if (module := persona(memory)) else []
     for type_ in layout.CONTEXT:
         found += read(memory, type_)
     return found
@@ -150,11 +183,22 @@ def render(memory: Path, *, query: str | None = None,
     With a query, motivations whose keywords it doesn't touch collapse to
     one line each — slug and age, never nothing, because a signal that
     vanished from the pack is a signal nobody knows to go and read.
-    Beliefs never collapse, whatever the query says.
+    Beliefs never collapse, whatever the query says, and neither does the
+    persona: an agent asked about invoices is not thereby a different
+    agent.
+
+    The persona goes first when there is one. Not because it matters
+    most — the order inside this block is the order it reads in: who is
+    talking, what they hold true, what is pushing them this week.
     """
     now = time.time() if now is None else now
     wanted = terms(query) if query else None
     out: list[str] = []
+    if module := persona(memory):
+        out.append(f"{PERSONA} — {LABELS[PERSONA]}:")
+        for line in module.text().splitlines():
+            out.append(f"  {line}".rstrip())
+        out.append("")
     for type_ in layout.CONTEXT:
         found = read(memory, type_)
         if not found:

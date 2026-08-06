@@ -9,12 +9,14 @@ with a grep.
 The context layers sit between them, and they are the only bodies in
 here. Everything else is a pointer, on purpose: a pack that includes
 note contents is a second, worse copy of the memory that goes stale
-inside the window. Beliefs and motivations have no clock and no
-lifecycle, so there is no version of one that can go stale mid-session.
+inside the window. The persona, the beliefs and the motivations have no
+clock and no lifecycle, so there is no version of one that can go stale
+mid-session.
 
-Of those two, only the motivations may be thinned by `--query`. A belief
+Of the three, only the motivations may be thinned by `--query`. A belief
 you failed to retrieve still binds; a signal only matters when it is
-relevant to what you are doing.
+relevant to what you are doing; and an agent asked about invoices is not
+thereby a different agent.
 
 Without a daemon, the `due:` block below IS the clock: overdue records
 surface at the top of every session instead of never.

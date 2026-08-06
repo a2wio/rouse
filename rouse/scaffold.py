@@ -5,9 +5,10 @@ file, and that cost lands on the two types written most often. `rouse
 new` is the answer to it: one command, one line of output, the header
 already filled in with the fields that level owes.
 
-It writes the two context layers too, and they go the other way — a
-belief is one flat file with almost no header, because there is no clock
-to feed and nothing will ever sit inside it.
+It writes the context layers too, and they go the other way — a belief is
+one flat file with almost no header, because there is no clock to feed and
+nothing will ever sit inside it. `new persona` is the one call with no
+slug at all: the tree holds one voice, and its name is its path.
 
 `rouse promote` exists because the backlog's only honest exit — becoming
 an intention — is a move across two trees, and a move that takes two
@@ -23,6 +24,11 @@ from . import context, files, layout, levels
 # what each level owes, in the order it reads best. `{now}` and `{day}`
 # are filled in; anything left blank is the writer's job.
 TEMPLATES: dict[str, tuple[list[tuple[str, str]], str]] = {
+    # the persona owes nothing either, for the same reason, and it is the
+    # one file `new` writes that has no slug: there is one voice per tree.
+    "persona": ([],
+                "How you talk. Register, length, what you sound like and "
+                "what you never sound like — not what you know.\n"),
     # a belief owes nothing. The fence is there empty so a wrapper can
     # stamp `origin:` onto the one kind of file that is injected whole on
     # every turn — nothing in it is the writer's to fill in.
@@ -96,10 +102,23 @@ def _write(path: Path, type_: str) -> Path:
     return path
 
 
-def new(memory: Path, type_: str, slug: str, under: str | None = None) -> Path:
+def new(memory: Path, type_: str, slug: str | None = None,
+        under: str | None = None) -> Path:
     if type_ not in layout.WRITABLE:
         raise ValueError(f"{type_!r} is not a type rouse writes: "
                          + ", ".join(layout.WRITABLE))
+    if type_ == context.PERSONA:
+        if under:
+            raise ValueError("the persona sits under nothing — it is the "
+                             "layer everything else is read through")
+        if slug:
+            raise ValueError(f"the persona takes no name: there is one voice "
+                             f"per tree and it is {layout.PERSONA} at the "
+                             f"root. Two of them is two agents, and the "
+                             f"second one wants its own tree")
+        return _write(Path(memory) / layout.PERSONA, type_)
+    if not slug:
+        raise ValueError(f"a {type_} needs a name")
     if type_ in layout.CONTEXT:
         if under:
             raise ValueError(f"a {type_} sits under nothing — it is context, "
@@ -184,6 +203,8 @@ def promote(memory: Path, slug: str, under: str | None = None) -> Path:
 def render_tree(memory: Path) -> str:
     """What is on disk, in the three shapes it comes in.
 
+    The persona is a yes or a no, because there is one of it.
+
     The context layers list flat, because the items in them are flat —
     the directories nest, one layer per level, but a belief that appeared
     to contain a motivation would be the lineage this system deliberately
@@ -199,6 +220,12 @@ def render_tree(memory: Path) -> str:
     if not roots and not modules:
         return "nothing written yet\n"
     out: list[str] = []
+
+    # one line, and no line at all when there isn't one — a tree with no
+    # persona is not a tree missing something
+    if any(m.type == context.PERSONA for m in modules):
+        out.append("persona (how you talk — injected whole, every session)")
+        out.append("")
 
     for type_ in layout.CONTEXT:
         found = [m for m in modules if m.type == type_]

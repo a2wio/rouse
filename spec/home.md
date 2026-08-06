@@ -36,11 +36,12 @@ filesystem cannot work out on its own.
 **Two agents must never share a memory tree.** Not a project one, not
 `~/.rouse`, not "just for now".
 
-The pack injects every belief and every motivation, whole, at the top of
-every session (`pack.md`). So a shared tree is one agent silently
-adopting another's ground truths — and then being nudged about
-intentions it never formed, and writing its own into a directory where
-the other one will read them as its own next session. Nothing in a
+The pack injects the persona, every belief and every motivation, whole, at
+the top of every session (`pack.md`). So a shared tree is one agent
+silently adopting another's ground truths — and its voice, since there is
+one `persona.md` per tree and it is not addressed to anybody — and then
+being nudged about intentions it never formed, and writing its own into a
+directory where the other one will read them as its own next session. Nothing in a
 record says who wrote it, because until now nothing had to: a tree
 *was* an agent. Sharing one deletes the only thing making the ladder
 mean anything, which is that the agent whose intention it is, is the

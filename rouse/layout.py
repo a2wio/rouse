@@ -48,6 +48,12 @@ three directories is. Path-is-parent applies from `intentions/` down.
 The two halves at the top: `entrypoint/` is what you mean — the
 instruction file, the context layers, and the records. `inventory/` is
 everything with no position: notes, probes, reminders, parked items.
+
+And one file above both of them, `persona.md`, which most trees won't
+have: how this agent talks, as opposed to what it knows or what it is
+doing. It sits at the root because it is the layer the other two are read
+through, and it is optional because a code reviewer wired into CI has no
+voice worth writing down.
 """
 
 # the two halves
@@ -55,6 +61,11 @@ ENTRYPOINT = "entrypoint"
 INVENTORY = "inventory"
 
 INSTRUCTIONS = "entrypoint/rouse.md"
+
+# the optional layer above both halves: one file, at the root, or none.
+# Fixed name and fixed place, because there is exactly one voice per tree
+# and a path is a cheaper way to say that than a rule about slugs.
+PERSONA = "persona.md"
 
 # the static layers: flat `<type>-<slug>.md` files, injected wholesale.
 # Each one holds the layer below it, and nothing else that is a directory.
@@ -77,7 +88,9 @@ BACKLOG = "inventory/backlog"
 # the sweeper's own scratch: cached demand readings, undelivered wakes
 SCRATCH = ".rouse"
 
-# the static layers, in the order the pack prints them
+# the two flat `<type>-<slug>.md` layers, in the order the pack prints
+# them. `persona` is context too but is not in here: it is one fixed file
+# rather than a directory of them, so nothing that globs a layer wants it.
 CONTEXT = ("belief", "motivation")
 
 # levels of intent that are records — nested, clocked, swept
@@ -89,8 +102,10 @@ RUNS = ("task", "reminder")
 # every type whose `<type>.md` makes a directory a record
 TYPES = (*LADDER, *RUNS, "backlog")
 
-# everything `rouse new` knows how to write
-WRITABLE = (*CONTEXT, *TYPES)
+# everything `rouse new` knows how to write. `persona` is first and is
+# deliberately not in TYPES: it is context, so no directory anywhere
+# becomes a record by holding one.
+WRITABLE = ("persona", *CONTEXT, *TYPES)
 
 # where `rouse new` puts one when nothing says otherwise. Records
 # default to the top of the record tree; you nest them by naming what

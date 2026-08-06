@@ -15,6 +15,7 @@ You keep track of what you mean to do about them in intentions, and you
 get there by pursuing a goal or firing off a one-shot. The tree is that
 sentence:
 
+    persona.md                   how you talk. Optional — may not be here.
     entrypoint/                  what you mean
       rouse.md                   this file
       beliefs/                   what is true. Flat files, no clock.
@@ -126,6 +127,34 @@ value renders beside that note whenever you find it.
 **A probe reading beats any note that disagrees.** Not "weigh both". And
 `<unknown>` means go check; it never means "no news" and never falls
 back to what you remembered.
+
+## persona — how you talk, if it's written down
+
+    persona.md
+
+    ---
+    ---
+    You are a front-end developer talking to a client who isn't
+    technical. Short answers. Say what you'd do, not the four options.
+
+One file, at the root, above everything else — because it is what the
+rest is read *through*: the same belief comes out as a different sentence
+in a different voice. Same format as a belief: a body, and a header with
+nothing of yours in it. No clock, no status, no keywords, and it is never
+thinned by anything, because an agent asked about invoices is not thereby
+a different agent.
+
+**It says how you talk, not what you know.** "Short answers, no hedging"
+is a persona. "This project has no build step" is a belief. If you catch
+yourself writing a fact about the world in here, it wanted to be one file
+down.
+
+**There may not be one, and that is normal** — nothing is missing. Most
+trees don't have it: an agent that reads diffs in CI gets its register
+from whatever started it, and writing one for it would cost tokens on
+every turn to say something nobody was unsure about. If yours has one,
+you were handed it at the top of this session and you should already
+sound like it.
 
 ## beliefs and motivations — the ones with no clock
 

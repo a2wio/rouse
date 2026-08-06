@@ -1,13 +1,13 @@
 # the rouse spec
 
-Eight files. Read them in this order; each one assumes the ones above
-it.
+Nine files. Read them in this order; each one assumes the ones above it.
 
     home.md          where the tree is, and one tree per agent
     notes.md         durable memory — the frontmatter every file carries
     probes.md        the facts you check instead of remember
     provenance.md    where a file came from, and why the model can't say
     ladder.md        the five levels of intent, and their clocks
+    persona.md       how it talks — the optional layer above all of them
     runs.md          tasks and reminders — the two things that actually run
     backlog.md       worth doing, not committed to
     pack.md          what the agent is handed at session start
@@ -17,6 +17,7 @@ it.
 **Context is flat; work is nested.**
 
     memory/
+      persona.md         how you talk. Optional, one per tree, injected
       entrypoint/
         rouse.md
         beliefs/           belief-<slug>.md        flat, no clock, injected
@@ -25,12 +26,13 @@ it.
       inventory/
         notes/  probes.md  reminders/  backlog/
 
-`beliefs/` and `motivations/` are one ground truth per file and nothing
-else — no status, no clock, no lifecycle. A belief is internal and
-timeless; a motivation is an external signal that arrived. The pack puts
-all of them in front of the model at the start of every session; they
-are a system prompt cut into modules, and the modules are the point. See
-`ladder.md`.
+`persona.md`, `beliefs/` and `motivations/` are one thing per file and
+nothing else — no status, no clock, no lifecycle. A belief is internal and
+timeless; a motivation is an external signal that arrived; the persona is
+the voice the other two are read through, and it is the one layer a tree
+may simply not have (`persona.md`). The pack puts all of them in front of
+the model at the start of every session; they are a system prompt cut into
+modules, and the modules are the point. See `ladder.md`.
 
 **The nesting of those directories is a sentence, not containment.** An
 agent has beliefs, is motivated by signals, keeps track in intentions.
@@ -59,7 +61,14 @@ runs, the screenshot it is about, the output it produced — and it makes
 **Two halves at the top.** `entrypoint/` is what you mean: the
 instruction file, the context layers, and the records. `inventory/` is
 what has no position at all — `notes/`, `probes.md`, `reminders/`,
-`backlog/`.
+`backlog/`. `persona.md` sits above both, because it is what both are read
+through.
+
+**Optional means optional.** The persona is the one file in here a
+conforming tree may not have, and an implementation must treat its absence
+as ordinary: no warning, no empty block in the pack, no default voice
+invented to fill the space. A rule that is only sometimes wanted is worth
+having only if not wanting it is silent.
 
 **One tree per agent, and it is found, not passed.** `--memory`, then
 `$ROUSE_HOME`, then `./memory`, then `~/.rouse`. Two agents sharing a
@@ -110,6 +119,12 @@ linted and swept like anything else. They are scaffolding rather than
 memory, which makes them the one thing in the tree that is meant to be
 removed.
 
+The persona is the one layer with no example, and the prefix is why: it is
+found by path, so a placeholder would have to be named `persona.md` to be
+read at all, and then it is an unmarked instruction about how to talk in a
+tree that was created ten seconds ago. `rouse new persona` writes it
+instead.
+
 ## what a conforming implementation must do
 
 Five things, and nothing else is required:
@@ -118,10 +133,11 @@ Five things, and nothing else is required:
    `./memory`, `~/.rouse` — and never let two agents onto one. An
    implementation that invents its own order is one an existing memory
    can't be pointed at; see `home.md`.
-1. **Inject the context layers.** Every file in `beliefs/` and
-   `motivations/`, whole, at the top of every session. They are the only
-   bodies that belong in a pack. Thinning the motivations by relevance
-   is optional (`pack.md`); thinning the beliefs is never allowed.
+1. **Inject the context layers.** `persona.md` if there is one, then every
+   file in `beliefs/` and `motivations/`, whole, at the top of every
+   session. They are the only bodies that belong in a pack. Thinning the
+   motivations by relevance is optional (`pack.md`); thinning the beliefs
+   or the persona is never allowed.
 2. **Walk and parse.** Find every `<type>.md`, read the header subset
    above, and take each record's parent to be the nearest enclosing
    *record* directory. `beliefs/`, `motivations/` and `intentions/` are

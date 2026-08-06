@@ -4,7 +4,7 @@
     rouse pack            the context block, for session start
     rouse due             what the clock would wake about, one line each
     rouse sweep           the tick loop, with a wake sink
-    rouse new             a record, or a belief/motivation
+    rouse new             a record, or a context module (persona/belief/…)
     rouse promote         a backlog item becomes an intention
     rouse tree            the context layers and the records, as they sit
     rouse check           lint the memory tree
@@ -64,11 +64,13 @@ def main(argv=None) -> int:
     p = sub.add_parser("new", help="make a record, or a context module",
                        parents=[common])
     p.add_argument("type", choices=layout.WRITABLE)
-    p.add_argument("slug")
+    # optional for exactly one type: `new persona` writes the root file,
+    # and there is no second one to tell it apart from
+    p.add_argument("slug", nargs="?")
     p.add_argument("--under", help="the slug of the record it sits under, "
                                    "or a path inside the memory directory. "
-                                   "Not for a belief or a motivation — "
-                                   "those sit under nothing")
+                                   "Not for a persona, a belief or a "
+                                   "motivation — those sit under nothing")
 
     p = sub.add_parser("promote", help="a backlog item becomes an intention",
                        parents=[common])
@@ -141,6 +143,15 @@ def cmd_init(args) -> int:
     print("that is tier 0 and it works. For the clock:")
     print(f"    python3 -m rouse pack  --memory {shown}   # at session start")
     print(f"    python3 -m rouse sweep --memory {shown}   # between sessions")
+    # the one layer the skeleton deliberately doesn't ship, so this line
+    # is the only place a person finds out it exists
+    print()
+    print(f"optional: `{shown}/{layout.PERSONA}` is how this agent talks — "
+          "written, it goes")
+    print("into every session above the beliefs. `rouse new persona` starts "
+          "one. An agent")
+    print("that only reviews code doesn't want one; anything a person talks "
+          "to does.")
     if args.globally:
         print()
         print(f"anything run with no --memory and no ./{home.LOCAL} beside "
@@ -242,19 +253,57 @@ CLOCK_FIELDS = ("status", "opened", "last-moved", "stale-after",
 # the context layers are injected whole, every session, forever. This is
 # roughly two thousand tokens of them — past it, "keep them few" has
 # stopped being true and the pack has started costing real money.
+#
+# ONE number for all three layers, including the persona. A second budget
+# would be a second thing to tune, and what is actually being defended
+# here is the per-turn cost, which does not care which file it came from:
+# a lavish persona and a wall of beliefs are the same bill.
 CONTEXT_BUDGET = 8000
 
 
+def _persona(memory: Path) -> list[str]:
+    """Lint the voice. Three things can be wrong with it and its absence
+    is not one of them — `spec/persona.md`, and the reason `check` on a
+    fresh skeleton is silent about a file the skeleton doesn't ship.
+
+    A `persona.md` somewhere other than the root is the one worth
+    catching. It parses, it reads like the real thing, and nothing
+    injects it: the layer is a fixed path, so a file in the wrong place
+    is not a misconfigured persona, it is a file nobody will ever see.
+    """
+    warnings = []
+    for path in sorted(memory.rglob(layout.PERSONA)):
+        if path != memory / layout.PERSONA:
+            warnings.append(
+                f"{path.relative_to(memory)}: the persona is one file at the "
+                f"tree root, and nothing reads one anywhere else. Move it to "
+                f"{layout.PERSONA} or give it a name that says what it is")
+    module = context.persona(memory)
+    if module is None:
+        return warnings
+    head = files.head(module.path) or {}
+    if late := [f for f in CLOCK_FIELDS if head.get(f)]:
+        warnings.append(f"{layout.PERSONA}: {', '.join(late)} in a persona — "
+                        "context has no clock and no lifecycle. A voice that "
+                        "is finished on Tuesday was an intention")
+    if head.get("keywords"):
+        warnings.append(f"{layout.PERSONA}: keywords on a persona — nothing "
+                        "reads them. It goes into the pack whole on every "
+                        "turn and is never gated by a query, so there is "
+                        "nothing to match against")
+    return warnings
+
+
 def _context(memory: Path) -> list[str]:
-    """Lint the two static layers. They have no clock, so almost nothing
-    can be wrong with one — which leaves exactly three things that can.
+    """Lint the static layers. They have no clock, so almost nothing can
+    be wrong with one — which leaves exactly three things that can.
 
     The layers nest by one directory each — `motivations/` inside
     `beliefs/`, `intentions/` inside `motivations/` — and that one is
     legal. Any other directory in there is somebody putting a ground
     truth inside a ground truth.
     """
-    warnings = []
+    warnings = _persona(memory)
     for type_ in layout.CONTEXT:
         root = memory / context.HOMES[type_]
         if not root.is_dir():
@@ -285,12 +334,18 @@ def _context(memory: Path) -> list[str]:
                     "It goes into the pack whole on every turn, so it is "
                     "never looked up; keywords are for what gets retrieved, "
                     "which is notes and motivations under `pack --query`")
-    size = sum(len(m.text()) for m in context.layers(memory))
+    modules = context.layers(memory)
+    size = sum(len(m.text()) for m in modules)
     if size > CONTEXT_BUDGET:
-        warnings.append(f"{layout.ENTRYPOINT}: {size} characters of beliefs "
-                        f"and motivations, over {CONTEXT_BUDGET} — every "
-                        "session pays for all of it. If everything is a "
-                        "belief, nothing is")
+        # name the split, because "trim your context" without a
+        # breakdown gets the wrong layer trimmed
+        by_type = ", ".join(
+            f"{sum(len(m.text()) for m in modules if m.type == type_)} "
+            f"{type_}" for type_ in (context.PERSONA, *layout.CONTEXT)
+            if any(m.type == type_ for m in modules))
+        warnings.append(f"context: {size} characters over {CONTEXT_BUDGET} "
+                        f"({by_type}) — every session pays for all of it. If "
+                        "everything is a belief, nothing is")
     return warnings
 
 

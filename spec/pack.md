@@ -25,6 +25,10 @@ tokens, and spend them on pointers rather than content.
       action/ask-about-the-rollback — 2d ago
         at: entrypoint/beliefs/motivations/intentions/migration-verified/ask-about-it
 
+    persona — how you talk, not what you know — not news:
+      You are a front-end developer talking to a client who is not
+      technical. Short answers. Say what you'd do, not the four options.
+
     beliefs — ground truth, always true, not news:
       [zero-downtime-deploys]
       Deployments always happen with no downtime. A rollout that needs a
@@ -70,22 +74,29 @@ to it — nesting means the name alone no longer says where to look. In
 tier 1 — no daemon — this block *is* the clock: overdue records surface
 at the top of every session rather than never.
 
-**4. The context layers, in full.** Every file in `beliefs/` and
-`motivations/`, body and all — one non-recursive pass each, since
-`motivations/` sits inside `beliefs/` and a recursive read would print
-it twice. This is the one place the pack carries
-content rather than pointers, and the reason is that these files have no
-clock and no lifecycle: there is no fresher version of one to go and
-read, so a copy in the window cannot drift from the file. They are the
-instructions rather than memory being quoted, and cutting them into
-modules is what lets this block be assembled from files instead of
-maintained as prose.
+**4. The context layers, in full.** `persona.md` if the tree has one,
+then every file in `beliefs/` and `motivations/`, body and all — one
+non-recursive pass each of the latter two, since `motivations/` sits
+inside `beliefs/` and a recursive read would print it twice. This is the
+one place the pack carries content rather than pointers, and the reason is
+that these files have no clock and no lifecycle: there is no fresher
+version of one to go and read, so a copy in the window cannot drift from
+the file. They are the instructions rather than memory being quoted, and
+cutting them into modules is what lets this block be assembled from files
+instead of maintained as prose.
 
-Label them as standing truth rather than news. A model handed a
+**Inside the block the order is persona, beliefs, motivations** — not by
+importance but because that is the order it reads in: who is talking, what
+they hold true, what reached them this week. **An absent persona prints
+nothing at all** — no header, no empty block, no invented default. Most
+trees haven't got one and that is not a gap; see `persona.md`.
+
+Label them all as standing truth rather than news. A model handed a
 paragraph at the top of a session will otherwise treat it as something
 that just came in and reply to it.
 
-The one exception is the query, below — and it never touches a belief.
+The one exception is the query, below — and it never touches a belief or
+the persona.
 
 **5. The memory index.** Recently-touched files listed with their
 keywords; everything older collapsed to name, age, keywords, origin.
@@ -98,20 +109,23 @@ reach it. Never let the pack imply it is complete — an agent that thinks
 the pack is the memory will never grep, and grep is most of the
 retrieval.
 
-## the query — beliefs always, motivations when they're about this
+## the query — the rules always, the signals when they're about this
 
 A caller that knows what the turn is about may say so:
 
     rouse pack --query "the staging migration keeps failing on deploy"
 
-**A belief is never affected by it.** Not thinned, not collapsed, not
-reordered. The asymmetry is the whole point and it is one sentence: **a
+**A belief is never affected by it, and neither is the persona.** Not
+thinned, not collapsed, not reordered. The asymmetry is the whole point and it is one sentence: **a
 rule you didn't retrieve still binds, and a signal only matters when
 it's relevant.** An agent that fails to recall "writing code starts in
 plan mode" does not thereby stop being expected to plan — the rule was
 never a lookup, it was the instructions. Gating a belief on a keyword
 match is how you build an agent that follows its own conventions
-whenever they happen to be mentioned.
+whenever they happen to be mentioned. The persona is the same argument
+one step further: an agent asked about invoices is not thereby a
+different agent, and a voice that arrives only on matching turns is a
+voice nobody would call consistent.
 
 A motivation is the other case exactly. It is a signal that arrived from
 outside, it is about something, and something is what it is about.
@@ -197,11 +211,16 @@ here will remind the model to go and read them.
   goes stale inside the context window. The context layers are the only
   bodies in here, and they are the only bodies that cannot go stale
   mid-session.
-- **Never gate a belief on a query.** Whatever `--query` says, every
-  belief goes in whole. See above; it is the one thing in here a
+- **Never gate a belief or the persona on a query.** Whatever `--query`
+  says, both go in whole. See above; it is the one thing in here a
   retrieval instinct will get wrong.
 - **Never let the context layers grow unbounded.** They are paid for on
   every turn forever. Past a couple of thousand tokens, warn — "keep
-  them few" is a rule with a number behind it.
+  them few" is a rule with a number behind it. **One budget covers all
+  three layers**, persona included: a second number would be a second
+  thing to tune, and what is being defended is the per-turn bill, which
+  does not care which file the characters came from. Say the split in the
+  warning, though — "trim your context" without a breakdown gets the
+  wrong layer trimmed.
 - **Never omit provenance.** `[untrusted]` and `[unknown]` are part of
   the line, not a detail.

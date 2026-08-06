@@ -26,6 +26,11 @@ Five levels, with a line across the middle. **Beliefs and motivations
 are context. Intentions and down are records.** Treating those as one
 kind of thing is the mistake this spec is written against.
 
+There is a sixth thing above all of it and it is not a level, which is why
+it is in its own file: `persona.md` at the tree root, how the agent talks
+as opposed to what it holds true. It has no clock either, it is injected
+the same way, and most trees haven't got one. See `persona.md`.
+
 ---
 
 ## the context half — `beliefs/` and `motivations/`

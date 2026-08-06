@@ -22,6 +22,7 @@ firing off a one-shot **action**.
 The tree is that sentence, read downward:
 
     memory/
+    ├── persona.md                     how it talks. Optional — see below.
     ├── entrypoint/
     │   ├── rouse.md                   the instruction file — point your agent here
     │   └── beliefs/                   internal, timeless. Injected every session.
@@ -49,6 +50,20 @@ a rule you will keep maintaining. The difference between the two is
 where it came from: a belief is the agent's, and holds regardless of the
 week; a motivation *arrived*, and gets deleted when the signal stops
 mattering.
+
+**`persona.md` is the same kind of file one layer higher, and most trees
+haven't got one.** It says how the agent talks — register, length, what it
+never sounds like — and it sits above `entrypoint/` because it is what
+everything below is read *through*: the same belief comes out as a
+different sentence in a different voice. Optional is a rule, not a
+shrug. An agent that reads diffs in CI gets its register from whatever
+wraps it and should skip the file; anything a person actually talks to
+wants one, and for those it is the highest-value file in the tree, because
+it is the one that is wrong in every single reply when it is wrong. Absent,
+it prints nothing and warns about nothing. `rouse new persona` starts one,
+and the skeleton deliberately ships no example — the layer is found by
+path, so a placeholder would be an unmarked personality injected into
+every session. See `spec/persona.md`.
 
 **Those directories nest because the sentence does — not because the
 files contain each other.** No motivation belongs to a belief and no
@@ -113,18 +128,18 @@ tree on the first run. Nothing special-cases them; delete them when your
 first real one lands.
 
 **Tier 1 — `rouse pack` at session start.** It prints one block: your
-beliefs and motivations in full, what is overdue, what moved recently,
-what the probes say this second. Still no daemon, but now there is a
-clock, sampled at session boundaries.
+persona if you wrote one, your beliefs and motivations in full, what is
+overdue, what moved recently, what the probes say this second. Still no
+daemon, but now there is a clock, sampled at session boundaries.
 
     python3 -m rouse pack >> .agent/context.md            # ./memory or ~/.rouse
     ROUSE_HOME=~/.rouse-oncall python3 -m rouse pack      # a named agent's
     python3 -m rouse pack --query "$PROMPT"               # thin the signals
 
 `--query` is optional and only ever touches the motivations: the ones it
-doesn't match shrink to a line, and every belief still goes in whole. A
-rule you didn't retrieve still binds; a signal only matters when it's
-about what you're doing.
+doesn't match shrink to a line, and the persona and every belief still go
+in whole. A rule you didn't retrieve still binds; a signal only matters
+when it's about what you're doing.
 
 **Tier 2 — `rouse sweep`.** Ticks every minute and delivers a wake the
 moment something comes due, to a file, a command, or a webhook. Only this
