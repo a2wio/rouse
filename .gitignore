@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+*.rouse-tmp
+
+# the sweeper's own scratch: cached demand readings and undelivered wakes
+.rouse/
