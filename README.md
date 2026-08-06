@@ -12,32 +12,43 @@ stopped moving and somebody was promised it wouldn't.
 
 ## the shape
 
-A record is a directory containing `<type>.md`. The type names the level;
-the path names the parent.
+Two kinds of file. Context is flat and has no clock. Work nests under
+what it is a run of, and it is on one.
 
     memory/
-    ├── entrypoint/                    what you mean, and everything under it
+    ├── entrypoint/
     │   ├── rouse.md                   the instruction file — point your agent here
-    │   └── green-deploy-isnt-a-migration/
-    │       ├── belief.md
-    │       └── keep-the-deploy-trustworthy/
-    │           ├── motivation.md
-    │           └── 2026-03-14-migration-verified/
-    │               ├── intention.md
-    │               ├── verify.sh
-    │               └── run-it-on-the-branch/
-    │                   └── task.md
-    └── inventory/                     everything with no place in the ladder
+    │   ├── beliefs/                   ground truth. Injected every session.
+    │   │   ├── belief-zero-downtime-deploys.md
+    │   │   └── belief-plan-before-code.md
+    │   ├── motivations/               what you're currently for. Same shape.
+    │   │   └── motivation-keep-the-deploy-trustworthy.md
+    │   └── intentions/                what you're doing. Records, with clocks.
+    │       └── 2026-03-14-migration-verified/
+    │           ├── intention.md
+    │           ├── verify.sh
+    │           └── run-it-on-the-branch/
+    │               └── task.md
+    └── inventory/                     everything with no position at all
         ├── notes/                     what you want to still know next week
         ├── probes.md                  commands whose output is the answer
         ├── reminders/<slug>/reminder.md
         └── backlog/<slug>/backlog.md
 
-Each level has a different contract with time. A belief has no clock. An
-intention is nudged when it stops moving, and ends `done` or `dropped`
-out loud, never by evaporating. A backlog item is never nudged at all,
-and pays for that by having no quiet exit either. Pick the level by the
-contract you want, not by how big the thing feels.
+**Beliefs and motivations are a system prompt cut into modules.** One
+ground truth per file — "deployments always happen with no downtime",
+"writing code starts in plan mode" — no status, no clock, nothing nested
+inside, and all of them put in front of the model at the start of every
+session. One per file is the point, because a rule you can add, drop or
+hand to another agent on its own is a rule you will keep maintaining.
+
+**From `intentions/` down, a record is a directory containing
+`<type>.md`.** The type names the level; the path names what it is a run
+of. These are the ones with a contract about time — an intention is
+nudged when it stops moving, and ends `done` or `dropped` out loud,
+never by evaporating. A backlog item is never nudged at all, and pays
+for that by having no quiet exit either. Pick by the contract you want,
+not by how big the thing feels.
 
 Probes are the smaller third piece and they stop most of the damage: a
 named command whose output *is* the answer, whose reading beats any note
@@ -58,15 +69,16 @@ agent already reads (CLAUDE.md, AGENTS.md, a system prompt):
 Zero processes. You get the conventions and an agent that treats a
 dropped intention as a failure.
 
-What you copy in isn't empty: it ships one example chain — belief,
-motivation, intention, task, one inside the next — plus an example
-reminder, backlog item and note, every slug prefixed `example-`. So
-`rouse tree` draws the ladder on the first run. Nothing special-cases
-them; delete them when your first real record lands.
+What you copy in isn't empty: two example beliefs, a motivation, an
+intention with a task inside it, plus an example reminder, backlog item
+and note, every slug prefixed `example-`. So `rouse tree` prints a real
+tree on the first run. Nothing special-cases them; delete them when your
+first real one lands.
 
-**Tier 1 — `rouse pack` at session start.** It prints one block: what is
-overdue, what moved recently, what the probes say this second. Still no
-daemon, but now there is a clock, sampled at session boundaries.
+**Tier 1 — `rouse pack` at session start.** It prints one block: your
+beliefs and motivations in full, what is overdue, what moved recently,
+what the probes say this second. Still no daemon, but now there is a
+clock, sampled at session boundaries.
 
     python3 -m rouse pack >> .agent/context.md
 

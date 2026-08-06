@@ -1,11 +1,15 @@
 """The table, and the arithmetic both readers share.
 
-One sweeper, not five (design/clock.md). Every level does the same three
+One sweeper, not three (design/clock.md). Every level does the same three
 steps — read the header, ask whether it is moving, decide if it is due —
 and what differs is a default interval and an extra clock. That is a
 table, and this is the table.
 
-The walk is in here too, because containment is the filesystem now
+Only records are in it. Beliefs and motivations are context, not records
+(context.py): no status, no clock, nothing to sweep. Nothing in this file
+knows they exist.
+
+The walk is in here too, because containment is the filesystem
 (layout.py): a record's parent is the nearest enclosing record directory,
 so the tree is read once and every question below is a lookup.
 
@@ -28,8 +32,8 @@ NUDGE_FLOOR = 15 * 60
 OPEN_STATES = {"task": ("pending", "running"), "reminder": ("pending",)}
 
 # any of these in `status:` means ended, at every level
-CLOSED = frozenset({"done", "dropped", "retired", "abandoned", "expired",
-                    "cancelled", "failed", "released", "promoted"})
+CLOSED = frozenset({"done", "dropped", "abandoned", "expired",
+                    "cancelled", "failed", "promoted"})
 
 
 class Record:
@@ -107,9 +111,6 @@ class Level:
 
 
 SWEPT: tuple[Level, ...] = (
-    Level("motivation", stale_after=7 * 86400,
-          question="nothing has been open under this for a while — are you "
-                   "still acting on it, or is it time to retire it?"),
     Level("intention", stale_after=2 * 3600,
           question="this has stopped moving. Move it, or drop it out loud."),
     # a goal is stale on a different condition: the last outcome LANDED
@@ -191,11 +192,6 @@ class Records:
             if directory == self.memory or directory == directory.parent:
                 return None
             directory = directory.parent
-
-    def ancestors(self, rec: Record):
-        seen = rec
-        while (seen := self.parent(seen)) is not None:
-            yield seen
 
     def children(self, rec: Record) -> list[Record]:
         if self._children is None:

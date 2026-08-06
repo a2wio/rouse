@@ -12,10 +12,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from rouse import files, layout, levels, pack, probes, scaffold, sweep  # noqa: E402
+from rouse import (context, files, layout, levels, pack, probes,  # noqa: E402
+                   scaffold, sweep)
 
 HOUR = 3600
-LADDER = f"{layout.ENTRYPOINT}"
+LADDER = layout.INTENTIONS
 
 
 def stamp(offset_s: float) -> str:
@@ -26,8 +27,8 @@ class Tree(unittest.TestCase):
     def setUp(self):
         self.dir = Path(tempfile.mkdtemp())
         self.memory = self.dir / "memory"
-        for name in (layout.ENTRYPOINT, layout.NOTES, layout.REMINDERS,
-                     layout.BACKLOG):
+        for name in (layout.BELIEFS, layout.MOTIVATIONS, layout.INTENTIONS,
+                     layout.NOTES, layout.REMINDERS, layout.BACKLOG):
             (self.memory / name).mkdir(parents=True)
         self.addCleanup(shutil.rmtree, self.dir)
 
@@ -38,6 +39,15 @@ class Tree(unittest.TestCase):
         path = self.memory / where / f"{type_}.md"
         path.parent.mkdir(parents=True, exist_ok=True)
         head = "\n".join(f"{k}: {v}" for k, v in header.items())
+        path.write_text(f"---\n{head}\n---\n\n{body}\n")
+        return path
+
+    def module(self, type_: str, slug: str, body: str = "what is true",
+               header: dict | None = None) -> Path:
+        """A context module: one flat `<type>-<slug>.md`, no clock."""
+        path = self.memory / context.HOMES[type_] / f"{type_}-{slug}.md"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        head = "\n".join(f"{k}: {v}" for k, v in (header or {}).items())
         path.write_text(f"---\n{head}\n---\n\n{body}\n")
         return path
 
@@ -102,22 +112,22 @@ class Header(Tree):
 
 
 class Walk(Tree):
-    """Containment is the filesystem now — this is what that buys."""
+    """Containment is the filesystem — this is what that buys."""
 
     def test_the_type_file_names_the_level(self):
-        self.rec(f"{LADDER}/b", "belief", {"status": "held"})
-        self.rec(f"{LADDER}/b/m", "motivation", {"status": "open"})
-        self.assertEqual([r.id for r in self.records().all()],
-                         ["belief/b", "motivation/m"])
+        self.rec(f"{LADDER}/i", "intention", {"status": "open"})
+        self.rec(f"{LADDER}/i/g", "goal", {"status": "open"})
+        self.assertEqual(sorted(r.id for r in self.records().all()),
+                         ["goal/g", "intention/i"])
 
     def test_the_parent_is_the_directory_above(self):
-        self.rec(f"{LADDER}/b", "belief", {"status": "held"})
-        self.rec(f"{LADDER}/b/m", "motivation", {"status": "open"})
+        self.rec(f"{LADDER}/i", "intention", {"status": "open"})
+        self.rec(f"{LADDER}/i/g", "goal", {"status": "open"})
         records = self.records()
-        motivation = records.of("motivation")[0]
-        self.assertEqual(records.parent(motivation).id, "belief/b")
+        goal = records.of("goal")[0]
+        self.assertEqual(records.parent(goal).id, "intention/i")
         self.assertEqual([r.id for r in records.children(
-            records.of("belief")[0])], ["motivation/m"])
+            records.of("intention")[0])], ["goal/g"])
 
     def test_levels_may_be_skipped(self):
         """An intention holding a task directly: the task's parent is the
@@ -153,6 +163,47 @@ class Walk(Tree):
     def test_a_record_file_at_the_memory_root_is_ignored(self):
         (self.memory / "intention.md").write_text("---\nstatus: open\n---\n")
         self.assertEqual(self.records().all(), [])
+
+    def test_the_context_layers_are_not_records(self):
+        """Nothing in the record walker knows beliefs exist — no status
+        to read, no clock to feed, nothing to nest under one."""
+        self.module("belief", "zero-downtime-deploys")
+        self.module("motivation", "keep-the-deploy-trustworthy")
+        self.assertEqual(self.records().all(), [])
+
+
+class Context(Tree):
+    """The static layers: flat files, injected whole, never swept."""
+
+    def test_a_module_is_named_by_its_file_minus_the_type_prefix(self):
+        self.module("belief", "zero-downtime-deploys")
+        found = context.read(self.memory, "belief")
+        self.assertEqual([m.id for m in found], ["belief/zero-downtime-deploys"])
+
+    def test_both_layers_are_read_in_order(self):
+        self.module("motivation", "ship-it")
+        self.module("belief", "deploys-are-boring")
+        self.assertEqual([m.id for m in context.layers(self.memory)],
+                         ["belief/deploys-are-boring", "motivation/ship-it"])
+
+    def test_a_module_with_no_header_at_all_still_reads(self):
+        path = self.memory / layout.BELIEFS / "belief-bare.md"
+        path.write_text("deploys never take the site down\n")
+        found = context.read(self.memory, "belief")
+        self.assertEqual(found[0].text(), "deploys never take the site down")
+
+    def test_nothing_in_the_layers_is_ever_due(self):
+        self.module("belief", "old", header={"keywords": "k"})
+        self.module("motivation", "older", header={"keywords": "k"})
+        self.assertEqual(levels.due(self.records()), [])
+
+    def test_a_subdirectory_is_not_a_nested_belief(self):
+        """Lineage above an intention is the thing this shape does not
+        have. A directory in `beliefs/` is a mistake, not a hierarchy."""
+        nested = self.memory / layout.BELIEFS / "deploys" / "belief-x.md"
+        nested.parent.mkdir(parents=True)
+        nested.write_text("---\n---\n\nnested\n")
+        self.assertEqual(context.read(self.memory, "belief"), [])
 
 
 class Due(Tree):
@@ -210,15 +261,10 @@ class Due(Tree):
                                               "nudges": "1"})
         self.assertEqual(levels.due(self.records()), [])
 
-    def test_beliefs_are_never_swept(self):
-        self.rec(f"{LADDER}/b", "belief",
-                 {"status": "held", "opened": stamp(-400 * 24 * HOUR)})
-        self.assertEqual(levels.due(self.records()), [])
-
-    def test_a_motivation_with_an_open_child_is_quiet(self):
-        self.rec(f"{LADDER}/m", "motivation",
+    def test_a_goal_with_an_open_action_is_quiet(self):
+        self.rec(f"{LADDER}/i/g", "goal",
                  {"status": "open", "last-moved": stamp(-30 * 24 * HOUR)})
-        self.rec(f"{LADDER}/m/a", "intention",
+        self.rec(f"{LADDER}/i/g/a", "action",
                  {"status": "open", "last-moved": stamp(-5 * 60)})
         self.assertEqual(levels.due(self.records()), [])
 
@@ -393,9 +439,37 @@ class Pack(Tree):
         self.note("x.md", {"updated": "2026-03-14", "keywords": "k"})
         self.assertIn("[unknown]", pack.render(self.memory))
 
-    def test_no_bodies_leak_into_the_pack(self):
+    def test_no_note_bodies_leak_into_the_pack(self):
         self.note("x.md", {"keywords": "k"}, "SECRET BODY TEXT")
         self.assertNotIn("SECRET BODY TEXT", pack.render(self.memory))
+
+    def test_the_context_layers_go_in_whole(self):
+        """The one exception to pointers-not-bodies, and the reason the
+        layers exist: this block IS the modular system prompt."""
+        self.module("belief", "zero-downtime",
+                    body="Deployments always happen with no downtime.")
+        self.module("motivation", "keep-it-honest",
+                    body="The pipeline should be evidence, not a vibe.")
+        out = pack.render(self.memory)
+        self.assertIn("Deployments always happen with no downtime.", out)
+        self.assertIn("The pipeline should be evidence, not a vibe.", out)
+        self.assertIn("[zero-downtime]", out)
+        self.assertIn("[keep-it-honest]", out)
+
+    def test_the_layers_are_labelled_as_standing_truth(self):
+        """A paragraph at the top of a session reads as something that
+        just came in unless the pack says otherwise."""
+        self.module("belief", "x")
+        self.assertIn("not news", pack.render(self.memory))
+
+    def test_the_layers_land_above_the_index_and_below_what_is_due(self):
+        self.module("belief", "zero-downtime")
+        self.note("x.md", {"keywords": "k"})
+        self.rec(f"{LADDER}/a", "intention",
+                 {"status": "open", "last-moved": stamp(-3 * HOUR)})
+        out = pack.render(self.memory)
+        self.assertLess(out.index("intention/a"), out.index("beliefs —"))
+        self.assertLess(out.index("beliefs —"), out.index("fresh memory"))
 
     def test_a_note_with_assets_is_indexed_by_its_directory(self):
         self.note("shipping/note.md", {"keywords": "shipping, ship"})
@@ -410,18 +484,27 @@ class Scaffold(Tree):
         path = scaffold.new(self.memory, "intention", "verify-the-migration")
         self.assertEqual(path.name, "intention.md")
         self.assertEqual(path.parent.name, "verify-the-migration")
-        self.assertEqual(path.parent.parent, self.memory / layout.ENTRYPOINT)
+        self.assertEqual(path.parent.parent, self.memory / layout.INTENTIONS)
         self.assertEqual(files.head(path)["status"], "open")
 
     def test_new_under_a_slug_nests_it(self):
-        scaffold.new(self.memory, "motivation", "keep-it-honest")
-        path = scaffold.new(self.memory, "intention", "verify-it",
-                            under="keep-it-honest")
+        scaffold.new(self.memory, "intention", "verify-it")
+        path = scaffold.new(self.memory, "task", "run-it", under="verify-it")
         records = levels.Records(self.memory)
-        intention = records.of("intention")[0]
-        self.assertEqual(records.parent(intention).id,
-                         "motivation/keep-it-honest")
+        self.assertEqual(records.parent(records.of("task")[0]).id,
+                         "intention/verify-it")
         self.assertTrue(path.exists())
+
+    def test_new_writes_a_belief_as_one_flat_file(self):
+        path = scaffold.new(self.memory, "belief", "zero-downtime-deploys")
+        self.assertEqual(path.parent, self.memory / layout.BELIEFS)
+        self.assertEqual(path.name, "belief-zero-downtime-deploys.md")
+        self.assertEqual(list(files.head(path)), ["keywords"])
+
+    def test_a_belief_cannot_be_put_under_anything(self):
+        scaffold.new(self.memory, "intention", "verify-it")
+        with self.assertRaises(ValueError):
+            scaffold.new(self.memory, "belief", "x", under="verify-it")
 
     def test_new_puts_a_reminder_in_the_inventory(self):
         path = scaffold.new(self.memory, "reminder", "pay-the-invoice")
@@ -449,24 +532,28 @@ class Scaffold(Tree):
         self.assertEqual([r.id for r in levels.Records(self.memory).all()],
                          ["intention/pin-the-runner"])
 
-    def test_promote_under_a_motivation_nests_it(self):
-        scaffold.new(self.memory, "motivation", "keep-it-honest")
+    def test_promote_lands_at_the_top_of_the_intentions(self):
         scaffold.new(self.memory, "backlog", "pin-the-runner")
-        scaffold.promote(self.memory, "pin-the-runner", under="keep-it-honest")
+        path = scaffold.promote(self.memory, "pin-the-runner")
+        self.assertEqual(path.parent.parent, self.memory / layout.INTENTIONS)
         records = levels.Records(self.memory)
-        intention = records.of("intention")[0]
-        self.assertEqual(records.parent(intention).id,
-                         "motivation/keep-it-honest")
+        self.assertIsNone(records.parent(records.of("intention")[0]))
 
-    def test_the_tree_shows_the_ladder(self):
-        self.rec(f"{LADDER}/b", "belief", {"status": "held"})
-        self.rec(f"{LADDER}/b/m", "motivation", {"status": "open"})
-        self.rec(f"{LADDER}/b/m/i", "intention", {"status": "open"})
+    def test_the_tree_lists_context_flat_and_nests_the_records(self):
+        self.module("belief", "zero-downtime")
+        self.module("motivation", "keep-it-honest")
+        self.rec(f"{LADDER}/i", "intention", {"status": "open"})
+        self.rec(f"{LADDER}/i/t", "task", {"status": "pending"})
         out = scaffold.render_tree(self.memory)
         self.assertEqual(out.splitlines(),
-                         ["belief b  [held]",
-                          "  motivation m  [open]",
-                          "    intention i  [open]"])
+                         ["beliefs:",
+                          "  zero-downtime",
+                          "",
+                          "motivations:",
+                          "  keep-it-honest",
+                          "",
+                          "intention i  [open]",
+                          "  task t  [pending]"])
 
 
 class Check(Tree):
@@ -492,20 +579,56 @@ class Check(Tree):
         code, out = self.check()
         self.assertIn("a record is a directory holding <type>.md", out)
 
+    def test_a_context_module_without_its_type_prefix_is_flagged(self):
+        (self.memory / layout.PROBES).write_text("")
+        (self.memory / layout.BELIEFS / "zero-downtime.md").write_text(
+            "---\n---\n\ndeploys stay up\n")
+        code, out = self.check()
+        self.assertEqual(code, 0)
+        self.assertIn("name it belief-zero-downtime.md", out)
+
+    def test_a_clock_field_on_a_belief_is_flagged(self):
+        """The whole misreading, caught by the linter: a belief with a
+        status is somebody expecting it to be swept."""
+        (self.memory / layout.PROBES).write_text("")
+        self.module("belief", "x", header={"status": "held",
+                                           "stale-after": "7d"})
+        code, out = self.check()
+        self.assertEqual(code, 0)
+        self.assertIn("context has no clock and no lifecycle", out)
+
+    def test_a_directory_under_beliefs_is_flagged(self):
+        (self.memory / layout.PROBES).write_text("")
+        nested = self.memory / layout.BELIEFS / "deploys" / "belief-x.md"
+        nested.parent.mkdir(parents=True)
+        nested.write_text("---\n---\n\nnested\n")
+        code, out = self.check()
+        self.assertIn("nothing sits under a ground truth", out)
+
+    def test_too_much_context_is_flagged(self):
+        (self.memory / layout.PROBES).write_text("")
+        for i in range(9):
+            self.module("belief", f"long-{i}", body="x" * 1000)
+        code, out = self.check()
+        self.assertEqual(code, 0)
+        self.assertIn("If everything is a belief, nothing is", out)
+
+    def test_an_intention_with_nothing_above_it_is_not_a_warning(self):
+        """The orphan rule is gone with the lineage: there is nothing
+        above an intention to be orphaned from."""
+        (self.memory / layout.PROBES).write_text("")
+        self.rec(f"{LADDER}/a", "intention",
+                 {"status": "open", "closes-when": "x"})
+        code, out = self.check()
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), "clean")
+
     def test_a_leftover_parent_field_is_flagged(self):
         (self.memory / layout.PROBES).write_text("")
         self.rec(f"{LADDER}/a", "intention",
                  {"status": "open", "closes-when": "x", "parent": "m"})
         code, out = self.check()
         self.assertIn("containment is the path now", out)
-
-    def test_an_intention_with_no_motivation_above_it_is_a_warning(self):
-        (self.memory / layout.PROBES).write_text("")
-        self.rec(f"{LADDER}/a", "intention",
-                 {"status": "open", "closes-when": "x"})
-        code, out = self.check()
-        self.assertEqual(code, 0)
-        self.assertIn("no motivation above it", out)
 
     def test_a_reminder_with_no_due_is_an_error(self):
         (self.memory / layout.PROBES).write_text("")
@@ -529,12 +652,19 @@ class Skeleton(unittest.TestCase):
             cli.main(["init", str(self.dir)])
         self.memory = self.dir / "memory"
 
-    def test_the_example_chain_draws_the_ladder_on_the_first_run(self):
+    def test_it_draws_both_shapes_on_the_first_run(self):
         out = scaffold.render_tree(self.memory).splitlines()
-        chain = [line.split()[0] for line in out[:4]]
-        self.assertEqual(chain, ["belief", "motivation", "intention", "task"])
-        self.assertEqual([len(line) - len(line.lstrip()) for line in out[:4]],
-                         [0, 2, 4, 6])
+        self.assertEqual(out[0], "beliefs:")
+        self.assertEqual(sorted(out[1:3]),
+                         ["  example-plan-before-code",
+                          "  example-zero-downtime-deploys"])
+        self.assertIn("motivations:", out)
+        self.assertIn("  example-keep-the-deploy-trustworthy", out)
+        # and the record half nests, which the context half must not
+        records = out[out.index("intention example-verify-the-staging-migration"
+                                "  [open]"):]
+        self.assertEqual(records[1],
+                         "  task example-run-it-on-the-branch  [pending]")
         self.assertIn("  reminder example-pay-the-invoice  [pending]", out)
         self.assertIn("  backlog example-pin-the-runner-version  [open]", out)
 
@@ -544,14 +674,20 @@ class Skeleton(unittest.TestCase):
         found = levels.due(levels.Records(self.memory), time.time())
         self.assertEqual([item.id for item in found], [])
 
-    def test_every_record_in_it_says_it_is_a_placeholder(self):
+    def test_every_file_in_it_says_it_is_a_placeholder(self):
         paths = [r.path for r in levels.Records(self.memory).all()]
+        paths += [m.path for m in context.layers(self.memory)]
         paths += pack.notes(self.memory)
-        self.assertEqual(len(paths), 7)
+        self.assertEqual(len(paths), 8)
         for path in paths:
-            self.assertTrue(path.parent.name.startswith("example-")
-                            or path.stem.startswith("example-"), path)
+            slug = path.parent.name if path.stem in layout.TYPES else path.stem
+            self.assertIn("example-", slug, path)
             self.assertTrue(files.body(path).startswith("Placeholder"), path)
+
+    def test_its_beliefs_are_flat_and_carry_no_clock(self):
+        for module in context.layers(self.memory):
+            self.assertEqual(module.path.parent.name, f"{module.type}s")
+            self.assertEqual(list(files.head(module.path) or {}), ["keywords"])
 
     def test_it_survives_its_own_linter(self):
         import contextlib

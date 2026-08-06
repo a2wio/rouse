@@ -4,9 +4,9 @@
     rouse pack            the context block, for session start
     rouse due             what the clock would wake about, one line each
     rouse sweep           the tick loop, with a wake sink
-    rouse new             make a record, under whatever it belongs to
+    rouse new             a record, or a belief/motivation
     rouse promote         a backlog item becomes an intention
-    rouse tree            the ladder, as it actually sits on disk
+    rouse tree            the context layers and the records, as they sit
     rouse check           lint the memory tree
     rouse stamp           write provenance — for a wrapper, not the model
 """
@@ -17,7 +17,7 @@ import sys
 import time
 from pathlib import Path
 
-from . import files, layout, levels, pack, probes, scaffold, sweep
+from . import context, files, layout, levels, pack, probes, scaffold, sweep
 
 SKELETON = Path(__file__).resolve().parents[1] / "skeleton"
 ORIGINS = ("owner", "agent", "system", "untrusted", "unknown")
@@ -47,19 +47,22 @@ def main(argv=None) -> int:
     sub.add_parser("due", help="what the clock would wake about",
                    parents=[common])
     sub.add_parser("check", help="lint the memory tree", parents=[common])
-    sub.add_parser("tree", help="the ladder as it sits on disk",
+    sub.add_parser("tree", help="the layers and the records as they sit",
                    parents=[common])
 
-    p = sub.add_parser("new", help="make a record", parents=[common])
-    p.add_argument("type", choices=layout.TYPES)
+    p = sub.add_parser("new", help="make a record, or a context module",
+                       parents=[common])
+    p.add_argument("type", choices=layout.WRITABLE)
     p.add_argument("slug")
     p.add_argument("--under", help="the slug of the record it sits under, "
-                                   "or a path inside the memory directory")
+                                   "or a path inside the memory directory. "
+                                   "Not for a belief or a motivation — "
+                                   "those sit under nothing")
 
     p = sub.add_parser("promote", help="a backlog item becomes an intention",
                        parents=[common])
     p.add_argument("slug")
-    p.add_argument("--under", help="the motivation it belongs to")
+    p.add_argument("--under", help="the record it belongs inside, if any")
 
     p = sub.add_parser("sweep", help="the tick loop", parents=[common])
     p.add_argument("--sink", default="file",
@@ -189,6 +192,48 @@ def cmd_stamp(args) -> int:
     return 0
 
 
+# everything a record header carries and a context module has no use
+# for. One of these on a belief means somebody expected it to be swept.
+CLOCK_FIELDS = ("status", "opened", "last-moved", "stale-after",
+                "closes-when", "success-when", "due", "swept", "nudges")
+
+# the context layers are injected whole, every session, forever. This is
+# roughly two thousand tokens of them — past it, "keep them few" has
+# stopped being true and the pack has started costing real money.
+CONTEXT_BUDGET = 8000
+
+
+def _context(memory: Path) -> list[str]:
+    """Lint the two static layers. They have no clock, so almost nothing
+    can be wrong with one — which leaves exactly three things that can."""
+    warnings = []
+    for type_ in layout.CONTEXT:
+        root = memory / context.HOMES[type_]
+        for path in sorted(root.rglob("*.md")):
+            where = path.relative_to(memory)
+            if path.parent != root:
+                warnings.append(f"{where}: nested inside {type_}s/ — these "
+                                "are flat files, and nothing sits under a "
+                                "ground truth")
+                continue
+            if not path.stem.startswith(f"{type_}-"):
+                warnings.append(f"{where}: name it {type_}-{path.stem}.md, so "
+                                "it still says what it is once it has been "
+                                "copied somewhere else")
+            head = files.head(path) or {}
+            if late := [f for f in CLOCK_FIELDS if head.get(f)]:
+                warnings.append(f"{where}: {', '.join(late)} in a {type_} — "
+                                "context has no clock and no lifecycle. If "
+                                "this one does, it wanted to be an intention")
+    size = sum(len(m.text()) for m in context.layers(memory))
+    if size > CONTEXT_BUDGET:
+        warnings.append(f"{layout.ENTRYPOINT}: {size} characters of beliefs "
+                        f"and motivations, over {CONTEXT_BUDGET} — every "
+                        "session pays for all of it. If everything is a "
+                        "belief, nothing is")
+    return warnings
+
+
 def cmd_check(args) -> int:
     """Lint. Errors are things that make a record untrackable; warnings
     are things that make it less useful."""
@@ -206,16 +251,21 @@ def cmd_check(args) -> int:
         errors.append(f"{rel(path)}: a second record file in the same "
                       "directory — one record, one directory")
 
+    warnings += _context(memory)
+
     # the flat-layout mistake: a record written as `<slug>.md` instead of
     # `<slug>/<type>.md`. An .md beside a record file is an asset and
     # fine; an .md in a directory that is nobody's record is a lost file.
     homes = {r.dir for r in all_records}
+    # flat by design, and not this rule's business: the two context
+    # layers (`_context` above has already had its say) and the
+    # instruction file
+    flat = {memory / layout.BELIEFS, memory / layout.MOTIVATIONS}
     for root in (layout.ENTRYPOINT, layout.REMINDERS, layout.BACKLOG):
         for path in sorted((memory / root).rglob("*.md")):
             if path.stem in layout.TYPES or path.parent in homes:
                 continue
-            if path.parent == memory / layout.ENTRYPOINT and path.name \
-                    == Path(layout.INSTRUCTIONS).name:
+            if path.parent in flat or path == memory / layout.INSTRUCTIONS:
                 continue
             warnings.append(f"{rel(path)}: not a record and not beside one — "
                             "a record is a directory holding <type>.md")
@@ -241,13 +291,9 @@ def cmd_check(args) -> int:
         else:
             seen[key] = where
 
-        if rec.type == "intention":
-            if not rec.head.get("closes-when"):
-                warnings.append(f"{where}: no closes-when — you can't tell "
-                                "when this is finished")
-            if not any(a.type == "motivation" for a in records.ancestors(rec)):
-                warnings.append(f"{where}: no motivation above it — fine for "
-                                "now, but nothing says why it exists")
+        if rec.type == "intention" and not rec.head.get("closes-when"):
+            warnings.append(f"{where}: no closes-when — you can't tell "
+                            "when this is finished")
         if rec.type == "backlog":
             for field in ("stale-after", "last-moved"):
                 if rec.head.get(field):
@@ -258,9 +304,6 @@ def cmd_check(args) -> int:
                                 "backlog item, and nothing will ever sweep it")
         if rec.type == "reminder" and not rec.head.get("due"):
             errors.append(f"{where}: a reminder with no due is not a reminder")
-        if rec.type == "belief" and not records.children(rec):
-            warnings.append(f"{where}: nothing under this belief — it's a "
-                            "slogan until something acts on it")
 
     for path in pack.notes(memory):
         head = files.head(path)

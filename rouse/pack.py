@@ -1,9 +1,16 @@
 """What the agent is handed at session start.
 
-Volatile first, durable last: if the context window forces truncation it
-eats the tail, and the tail should be the part that can be re-read on
-demand. Pointers, never bodies — a pack that includes note contents is a
-second, worse copy of the memory that goes stale inside the window.
+Two orderings, not one. The freshest facts go first — now, the probes,
+what is overdue — because they are what the rest of the session is
+wrong without. The re-readable index goes last, because truncation eats
+the tail and a notes index is the one block the agent can reconstruct
+with a grep.
+
+The context layers sit between them, and they are the only bodies in
+here. Everything else is a pointer, on purpose: a pack that includes
+note contents is a second, worse copy of the memory that goes stale
+inside the window. Beliefs and motivations have no clock and no
+lifecycle, so there is no version of one that can go stale mid-session.
 
 Without a daemon, the `due:` block below IS the clock: overdue records
 surface at the top of every session instead of never.
@@ -12,7 +19,7 @@ surface at the top of every session instead of never.
 import time
 from pathlib import Path
 
-from . import files, layout, levels, probes
+from . import context, files, layout, levels, probes
 
 FRESH_S = 36 * 3600      # listed in full above this age
 MAX_OLDER = 60           # lines before the older list is truncated
@@ -32,7 +39,8 @@ def render(memory: Path, *, budget_ms: int = probes.BUDGET_MS,
         out += [f"  {name}: {value}" for name, value in readings]
         out.append("")
 
-    out += _due(records, now) + _ladder(records) + _notes(memory, now)
+    out += (_due(records, now) + context.render(memory)
+            + _ladder(records) + _notes(memory, now))
     if records.broken:
         out.append("")
         out.append("no header, so nothing can track these: "
@@ -58,6 +66,9 @@ def _due(records: levels.Records, now: float) -> list[str]:
 
 
 def _ladder(records: levels.Records) -> list[str]:
+    """Counts only — the records themselves are reached through `due:`
+    and through the paths in it. The context layers are not counted here
+    because they were just printed in full."""
     parts = []
     for name in (*layout.LADDER, *layout.RUNS):
         open_ = [r for r in records.of(name) if not levels.closed(r)]

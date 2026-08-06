@@ -6,58 +6,77 @@ you later.
 
 Read this before writing anything into `memory/`.
 
-## the one rule
+## two kinds of thing in here
 
-**A record is a directory containing `<type>.md`.** The type names what
-it is; the path names what it belongs to.
-
-    entrypoint/green-deploy-isnt-a-migration/     ← a belief
-      belief.md
-      keep-the-deploy-trustworthy/                ← a motivation under it
-        motivation.md
-        2026-03-14-migration-verified/            ← an intention under that
-          intention.md
-          run-it-on-the-branch/                   ← a task under that
-            task.md
-
-Nothing says "my parent is X" — the directory it sits in does, and it
-can't disagree with itself. Levels may be skipped: put a task straight
-under an intention when there is no goal worth writing.
-
-A record's directory is also where its things live. The script it runs,
-the screenshot it's about, the output it produced — they sit beside
-`<type>.md` and travel with it.
-
-    entrypoint/                what you mean, and everything under it
+    entrypoint/                what you mean
       rouse.md                 this file
-    inventory/                 everything with no place in the ladder
+      beliefs/                 what is true. Flat files, no clock.
+        belief-<slug>.md
+      motivations/             what you're for. Same shape.
+        motivation-<slug>.md
+      intentions/              what you're doing. Records, with clocks.
+        <slug>/intention.md
+    inventory/                 everything with no position at all
       notes/                   what you know and want to know next week
       probes.md                commands whose output is the answer
       reminders/<slug>/        promises on a clock
       backlog/<slug>/          worth doing, not committed to
 
-The types: `belief`, `motivation`, `intention`, `goal`, `action`, `task`,
-`reminder`, `backlog`.
+**`beliefs/` and `motivations/` are context, not work.** One ground
+truth per file, flat, nothing nested inside. They have no status and no
+clock; nothing will ever nudge you about one. All of them are put in
+front of you at the start of every session — that is the whole
+mechanism, and one-per-file is the whole idea, because a rule you can
+add or drop without editing a wall of prose is a rule you will actually
+maintain.
 
-Every record file is markdown with a small header. Nothing is ever
+    beliefs/belief-zero-downtime-deploys.md
+    motivations/motivation-keep-the-deploy-trustworthy.md
+
+A motivation is why an intention exists. It says so in words, in its own
+body; there is no field and no directory linking the two, because the
+intention will close and the motivation will not.
+
+**From `intentions/` down, a record is a directory containing
+`<type>.md`.** The type names what it is; the path names what it is a
+run of.
+
+    entrypoint/intentions/
+      2026-03-14-migration-verified/     ← an intention
+        intention.md
+        verify.sh                        ← its things live with it
+        run-it-on-the-branch/            ← a task under it
+          task.md
+
+Nothing says "my parent is X" — the directory it sits in does, and it
+can't disagree with itself. Levels may be skipped: put a task straight
+under an intention when there is no goal worth writing. A record's
+directory is also where its things live — the script it runs, the
+screenshot it's about, the output it produced.
+
+The record types: `intention`, `goal`, `action`, `task`, `reminder`,
+`backlog`. Each is markdown with a small header. Nothing is ever
 deleted; a finished record changes its `status:` and stays. Stamps are
 `YYYY-MM-DD HH:MM`, local. Intervals are `30m`, `2h`, `1d`.
 
-If the reference CLI is around, `rouse new intention pin-the-runner
---under keep-the-deploy-trustworthy` makes the directory and the header
-in one go. If it isn't, `mkdir` and write the file — that is all it does.
+If the reference CLI is around, `rouse new intention pin-the-runner`
+makes the directory and the header in one go, and `rouse new belief
+zero-downtime-deploys` writes the flat file. If it isn't, `mkdir` and
+write the file — that is all it does.
 
-## the `example-` records
+## the `example-` files
 
-Everything whose name starts with `example-` shipped with this
-directory: one chain of four in `entrypoint/`, plus a reminder, a
-backlog item and a note. They are scaffolding, so the shape is visible
-before anything real is written. **Nothing in them is something you
-believe, promised or were asked to do — never act on one.**
+Everything whose name carries `example-` shipped with this directory:
+two beliefs, a motivation, an intention with a task inside it, plus a
+reminder, a backlog item and a note. They are scaffolding, so the shape
+is visible before anything real is written. **Nothing in them is
+something you believe, promised or were asked to do — never act on
+one.**
 
-They are ordinary records otherwise: walked, linted and swept like any
-other, because a shape only visible when the tooling special-cases it
-isn't the shape. Delete them when the first real record lands.
+They are ordinary files otherwise: injected, walked, linted and swept
+like any other, because a shape only visible when the tooling
+special-cases it isn't the shape. Delete them when the first real one
+lands.
 
 ## notes — silent by default
 
@@ -100,13 +119,41 @@ value renders beside that note whenever you find it.
 `<unknown>` means go check; it never means "no news" and never falls
 back to what you remembered.
 
+## beliefs and motivations — the ones with no clock
+
+    entrypoint/beliefs/belief-zero-downtime-deploys.md
+
+    ---
+    keywords: deploy, downtime, rollout, migrations
+    ---
+    Deployments always happen with no downtime. A rollout that needs a
+    maintenance window is a rollout that went wrong earlier.
+
+That is the entire format. No `status:`, no `stale-after:`, nothing that
+ticks — if you find yourself wanting one of those, what you wanted was
+an intention. The header is optional and `keywords:` is the only thing
+in it, for grep.
+
+Write one when a rule turns out to hold generally: not "the staging
+deploy broke on Tuesday" (that is a note) but the thing you now expect
+to be true next time. **Keep them few and keep them separate** — one per
+file, because every session pays for all of them, and because the point
+of the split is that a rule can be dropped or handed to another agent on
+its own.
+
+A motivation is the same file in a different directory, and the
+difference is only what it is about: a belief is about the world, a
+motivation is about what you are currently for. It is what makes an
+intention worth having, and it says so in its own body — there is no
+field linking them, and there shouldn't be.
+
 ## intentions — you can't quietly drop one
 
 Anything you said you'd do that has no other trigger — nobody will
 message you about it, no job will finish and remind you — goes in a
 record, in the same turn you say it:
 
-    entrypoint/…/2026-03-14-migration-verified/intention.md
+    entrypoint/intentions/2026-03-14-migration-verified/intention.md
 
     ---
     status: open
@@ -116,10 +163,6 @@ record, in the same turn you say it:
     closes-when: the migration has run once with me watching
     ---
     Why this exists, and what picking it back up looks like.
-
-Put it under the motivation it serves. If there isn't one written down,
-put it at the top of `entrypoint/` — an unmoored intention should look
-unmoored.
 
 When you move it, stamp `last-moved:`. When something stops moving
 you'll be asked about it — treat that as you thinking of the thing
@@ -197,8 +240,9 @@ you catch yourself writing `stale-after: 30d` on an intention to keep it
 quiet, what you wanted was a backlog item.
 
 The price of the silence is that an item leaves in exactly two ways:
-**promoted** — the directory moves into the ladder and becomes an
-intention — or **dropped out loud**. Never by quietly ceasing to exist.
+**promoted** — the directory moves into `entrypoint/intentions/` and
+becomes one — or **dropped out loud**. Never by quietly ceasing to
+exist.
 
 ## the two lines that matter most
 

@@ -5,8 +5,12 @@ file, and that cost lands on the two types written most often. `rouse
 new` is the answer to it: one command, one line of output, the header
 already filled in with the fields that level owes.
 
+It writes the two context layers too, and they go the other way — a
+belief is one flat file with almost no header, because there is no clock
+to feed and nothing will ever sit inside it.
+
 `rouse promote` exists because the backlog's only honest exit — becoming
-an intention — is now a move across two trees, and a move that takes two
+an intention — is a move across two trees, and a move that takes two
 commands is a move somebody does halfway.
 """
 
@@ -14,18 +18,17 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from . import files, layout, levels
+from . import context, files, layout, levels
 
 # what each level owes, in the order it reads best. `{now}` and `{day}`
 # are filled in; anything left blank is the writer's job.
 TEMPLATES: dict[str, tuple[list[tuple[str, str]], str]] = {
-    "belief": ([("status", "held"), ("learned", "{day}")],
-               "What is true about the world you work in.\n\n"
-               "Taught by:\nWould stop believing it if:\n"),
-    "motivation": ([("status", "open"), ("opened", "{now}"),
-                    ("last-moved", "{now}"), ("signals", "")],
-                   "The standing why. It never reaches done; it only "
-                   "spawns children.\n"),
+    "belief": ([("keywords", "")],
+               "One ground truth about the world you work in, stated "
+               "plainly and in the present tense.\n"),
+    "motivation": ([("keywords", "")],
+                   "What you are currently for, and what it makes you do "
+                   "by default.\n"),
     "intention": ([("status", "open"), ("opened", "{now}"),
                    ("last-moved", "{now}"), ("stale-after", "2h"),
                    ("closes-when", "")],
@@ -78,21 +81,29 @@ def resolve(memory: Path, under: str | None, type_: str) -> Path:
                      + ", ".join(str(r.rel) for r in hits))
 
 
-def new(memory: Path, type_: str, slug: str, under: str | None = None) -> Path:
-    if type_ not in layout.TYPES:
-        raise ValueError(f"{type_!r} is not a record type: "
-                         + ", ".join(layout.TYPES))
-    target = resolve(memory, under, type_) / slug
-    path = target / f"{type_}.md"
+def _write(path: Path, type_: str) -> Path:
     if path.exists():
         raise ValueError(f"{path} already exists — not touching it")
     fields, body = TEMPLATES[type_]
     now, day = files.stamp(), files.stamp()[:10]
     header = "\n".join(f"{k}: {v.format(now=now, day=day)}".rstrip()
                        for k, v in fields)
-    target.mkdir(parents=True, exist_ok=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(f"---\n{header}\n---\n\n{body}", encoding="utf-8")
     return path
+
+
+def new(memory: Path, type_: str, slug: str, under: str | None = None) -> Path:
+    if type_ not in layout.WRITABLE:
+        raise ValueError(f"{type_!r} is not a type rouse writes: "
+                         + ", ".join(layout.WRITABLE))
+    if type_ in layout.CONTEXT:
+        if under:
+            raise ValueError(f"a {type_} sits under nothing — it is context, "
+                             "not a record")
+        return _write(Path(memory) / context.HOMES[type_]
+                      / f"{type_}-{slug}.md", type_)
+    return _write(resolve(memory, under, type_) / slug / f"{type_}.md", type_)
 
 
 def _move(src: Path, dst: Path) -> None:
@@ -133,19 +144,29 @@ def promote(memory: Path, slug: str, under: str | None = None) -> Path:
 
 
 def render_tree(memory: Path) -> str:
-    """The payoff of containment being the filesystem: who descends from
-    what, without opening a file.
+    """What is on disk, in the three shapes it comes in.
 
-    Two blocks, because the tree has two halves — what you mean, and
-    what is merely on the clock or parked.
+    The context layers list flat, because they are flat — a belief that
+    appeared to contain something would be the lineage this system
+    deliberately doesn't have. The records nest, which is the payoff of
+    containment being the filesystem: who is a run of what, without
+    opening a file.
     """
     memory = Path(memory)
     records = levels.Records(memory)
+    modules = context.layers(memory)
     roots = sorted((r for r in records.all() if records.parent(r) is None),
                    key=lambda r: (r.type, r.slug))
-    if not roots:
+    if not roots and not modules:
         return "nothing written yet\n"
     out: list[str] = []
+
+    for type_ in layout.CONTEXT:
+        found = [m for m in modules if m.type == type_]
+        if found:
+            out.append(f"{type_}s:")
+            out += [f"  {m.slug}" for m in found]
+            out.append("")
 
     def walk(rec, depth):
         status = (rec.head.get("status") or "").strip()
@@ -165,4 +186,4 @@ def render_tree(memory: Path) -> str:
         out.append(f"{layout.INVENTORY}:")
         for root in rest:
             walk(root, 1)
-    return "\n".join(out) + "\n"
+    return "\n".join(out).rstrip("\n") + "\n"

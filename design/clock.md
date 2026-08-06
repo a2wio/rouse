@@ -5,28 +5,33 @@ point of writing it down separately is that anyone can write another in
 whatever language their agent already runs in, and the files stay
 compatible.
 
-## one sweeper, not five
+## one sweeper, not four
 
 The levels differ in a default interval, a definition of movement, and
-the sentence used to wake the agent. That is a table, not five programs.
+the sentence used to wake the agent. That is a table, not four programs.
 
     level        interval   own clock                 extra
-    motivation   7d         —
     intention    2h         —
     goal         1h         newest ending underneath  review-every
     action       1d         —
+    task         —          —                         no clock; see below
     reminder     per-file   —                         nag re-arm
 
-Beliefs are not in the table and never join it. A level joins when it
-has its own condition, not when it exists — running the intention clock
-over motivations produces nudges that were never coming, which is
-precisely the noise that makes a nudge stop working.
+Beliefs and motivations are not in the table and never join it. They are
+context — flat files with no status and no lifecycle (`spec/ladder.md`)
+— and the sweeper does not read them at all. A level joins the table
+when it has its own condition, not when it exists; running the intention
+clock over things that are simply true produces nudges that were never
+coming, which is precisely the noise that makes a nudge stop working.
 
-There is no directory column, because there are no level directories.
-The sweeper walks the whole tree once and takes a record's level from the
-name of its `<type>.md` and its parent from the directory above it (see
-`spec/README.md`). One walk, one dictionary, and every "is anything open
-under this" question is a lookup rather than a scan.
+A task has no clock of its own either. It is in the walk because it is
+what keeps everything above it quiet, and it is somebody else's runner
+that ends it.
+
+The sweeper walks the record tree once and takes a record's level from
+the name of its `<type>.md` and its parent from the directory above it
+(see `spec/README.md`). One walk, one dictionary, and every "is anything
+open under this" question is a lookup rather than a scan.
 
 The arithmetic every row shares:
 
@@ -112,7 +117,7 @@ The record's body, plus three facts the model cannot infer: which level
 this is, how long it has sat still, and which nudge number this is.
 
     intention/2026-03-14-migration-verified — nudge 2, last moved 4h ago
-    at: entrypoint/liability/keep-the-deploy-trustworthy/2026-03-14-migration-verified
+    at: entrypoint/intentions/2026-03-14-migration-verified
     closes-when: the staging migration has run once with me watching
 
     <the body>

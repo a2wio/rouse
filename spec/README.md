@@ -13,24 +13,42 @@ it.
 
 ## the rules underneath all of it
 
-**A record is a directory containing `<type>.md`.** The type names the
-level — `belief`, `motivation`, `intention`, `goal`, `action`, `task`,
-`reminder`, `backlog`. The directory it sits in names its parent.
+**Context is flat; work is nested.**
 
-    entrypoint/liability/keep-the-deploy-trustworthy/verify-it/intention.md
+    memory/
+      entrypoint/
+        rouse.md
+        beliefs/       belief-<slug>.md          flat, no clock, injected
+        motivations/   motivation-<slug>.md      flat, no clock, injected
+        intentions/    <slug>/intention.md       records, with clocks
+      inventory/
+        notes/  probes.md  reminders/  backlog/
 
-is an intention, under a motivation, under a belief, and nothing in any
-header says so. Containment used to be a `parent:` field; a field can
-disagree with the tree, and then something has to decide which one is
-lying.
+`beliefs/` and `motivations/` are one ground truth per file and nothing
+else — no status, no clock, no lifecycle, nothing nested inside. The
+pack puts all of them in front of the model at the start of every
+session; they are a system prompt cut into modules, and the modules are
+the point. See `ladder.md`.
+
+**A record is a directory containing `<type>.md`.** From `intentions/`
+down. The type names the level — `intention`, `goal`, `action`, `task`,
+`reminder`, `backlog` — and the directory it sits in names its parent.
+
+    entrypoint/intentions/verify-it/run-it-on-the-branch/task.md
+
+is a task, and what it is a run of is the intention above it, and
+nothing in any header says so. Containment used to be a `parent:` field;
+a field can disagree with the tree, and then something has to decide
+which one is lying.
 
 It also gives every record somewhere to keep its things — the script it
 runs, the screenshot it is about, the output it produced — and it makes
-`tree` show the ladder instead of a pile of directories.
+`tree` show what is a run of what instead of a pile of directories.
 
-**Two halves.** `entrypoint/` is intent: the instruction file and every
-record with a position in the ladder. `inventory/` is what has no
-position — `notes/`, `probes.md`, `reminders/`, `backlog/`.
+**Two halves at the top.** `entrypoint/` is what you mean: the
+instruction file, the context layers, and the records. `inventory/` is
+what has no position at all — `notes/`, `probes.md`, `reminders/`,
+`backlog/`.
 
 **One thing per record.** A record is the unit of everything: of recall,
 of staleness, of a wake. Two topics in one means two clocks fighting over
@@ -60,24 +78,28 @@ editing a file by hand gets them right without looking anything up.
 stays where it is. The history of what you meant to do and didn't is
 worth more than the tidiness.
 
-**The examples are ordinary records.** A skeleton ships one example
-chain, every slug prefixed `example-`, so the shape is visible before
-anything has been written. No implementation may special-case that
-prefix — they are walked, linted and swept like anything else. They are
-scaffolding rather than memory, which makes them the one thing in the
-tree that is meant to be removed.
+**The examples are ordinary files.** A skeleton ships two beliefs, a
+motivation and an intention with a task in it, every slug prefixed
+`example-`, so the shape is visible before anything has been written. No
+implementation may special-case that prefix — they are injected, walked,
+linted and swept like anything else. They are scaffolding rather than
+memory, which makes them the one thing in the tree that is meant to be
+removed.
 
 ## what a conforming implementation must do
 
-Three things, and nothing else is required:
+Four things, and nothing else is required:
 
-1. **Walk and parse.** Find every `<type>.md`, read the header subset
+1. **Inject the context layers.** Every file in `beliefs/` and
+   `motivations/`, whole, at the top of every session. They are the only
+   bodies that belong in a pack.
+2. **Walk and parse.** Find every `<type>.md`, read the header subset
    above, and take each record's parent to be the nearest enclosing
    record directory.
-2. **Compute due** — `due_at = max(last-moved, swept, the level's own
+3. **Compute due** — `due_at = max(last-moved, swept, the level's own
    clock) + stale-after`, floored at 15 minutes, and never for a record
    with something open under it.
-3. **Deliver a wake** — at most once per record per tick, and record
+4. **Deliver a wake** — at most once per record per tick, and record
    that it delivered. A wake that is lost quietly is the failure mode
    this whole system exists to prevent; see `design/clock.md`.
 

@@ -1,6 +1,7 @@
 # runs — tasks and reminders
 
-The ladder is intent. These two are the things that actually execute:
+The record half is intent. These two are the things that actually
+execute:
 a task is work handed to somebody else, a reminder is a promise on a
 clock. Both are records, and that is the point — **delegation and
 follow-through have no existence outside the filesystem**, so neither
@@ -16,11 +17,12 @@ file.
 
 A task lives **inside the record it is a run of**:
 
-    …/2026-03-14-migration-verified/     the intention
-      intention.md
-      run-it-on-the-branch/              the task
-        task.md
-        run.log
+    entrypoint/intentions/
+      2026-03-14-migration-verified/     the intention
+        intention.md
+        run-it-on-the-branch/            the task
+          task.md
+          run.log
 
     ---
     status: pending           pending | running | done | failed | cancelled
@@ -38,7 +40,8 @@ diff, the screenshots — belongs in that same directory rather than in a
 scratch space nobody looks in again.
 
 A task with nothing above it is legal and sits at the top of
-`entrypoint/`: it is a job that is a run of nothing in particular.
+`entrypoint/intentions/`: it is a job that is a run of nothing in
+particular.
 
 The lifecycle is the contract:
 
@@ -66,14 +69,14 @@ Three properties fall out of it being a file and not a queue entry:
 
 ### movement, upward
 
-While a task is `pending` or `running`, **nothing above it in the ladder
-is nudged.** The work is in flight; a nudge would be noise. When it
+While a task is `pending` or `running`, **nothing above it is nudged.**
+The work is in flight; a nudge would be noise. When it
 finishes, the levels above it become due again — which is exactly the
 right moment to ask the only question that matters: *did that close it?*
 
-That is the whole integration between the two halves of this spec, and
-under the new shape it needs no wiring at all: "above it" is the
-directory it is in.
+That is the whole integration between intent and execution, and under
+this shape it needs no wiring at all: "above it" is the directory it is
+in.
 
 ### cancelling
 
