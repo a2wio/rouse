@@ -3,17 +3,23 @@
 Run: python3 -m unittest discover -s rouse/tests -t .
 """
 
+import contextlib
+import io
+import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from rouse import (context, files, layout, levels, pack, probes,  # noqa: E402
-                   scaffold, sweep)
+from rouse import __main__ as cli  # noqa: E402
+from rouse import (context, files, home, layout, levels, pack,  # noqa: E402
+                   probes, scaffold, sweep)
 
 HOUR = 3600
 LADDER = layout.INTENTIONS
@@ -408,6 +414,18 @@ class Sweeping(Tree):
                  {"status": "open", "last-moved": stamp(-3 * HOUR)})
         self.assertEqual(self.records().all(), [])
 
+    def test_a_tree_that_lives_at_dot_rouse_is_not_its_own_scratch(self):
+        # the scratch directory inside a tree is `.rouse`, and so is the
+        # global home. Skipping that name anywhere in the path emptied
+        # every ~/.rouse tree at once, which looked like a working
+        # install right up until nothing was ever due
+        tree = self.dir / layout.SCRATCH
+        (tree / LADDER / "verify-it").mkdir(parents=True)
+        (tree / LADDER / "verify-it" / "intention.md").write_text(
+            "---\nstatus: open\n---\n\nthe body\n")
+        self.assertEqual([r.type for r in levels.Records(tree).all()],
+                         ["intention"])
+
 
 class Probes(Tree):
     def probes_md(self, text):
@@ -592,9 +610,6 @@ class Scaffold(Tree):
 
 class Check(Tree):
     def check(self):
-        from rouse import __main__ as cli
-        import io
-        import contextlib
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             code = cli.main(["check", "--memory", str(self.memory)])
@@ -689,14 +704,143 @@ class Check(Tree):
         self.assertIn("not a reminder", out)
 
 
+class Home(unittest.TestCase):
+    """Finding the tree: --memory, then $ROUSE_HOME, then ./memory, then
+    ~/.rouse.
+
+    Everything in here overrides `$HOME` and clears `$ROUSE_HOME`. The
+    first is so no test can lay a tree in the real home directory; the
+    second is because a machine that happens to have one set would
+    otherwise answer rung 2 to every question.
+    """
+
+    def setUp(self):
+        self.dir = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.dir)
+        self.home = self.dir / "home"
+        self.work = self.dir / "work"
+        self.home.mkdir()
+        self.work.mkdir()
+        env = mock.patch.dict(os.environ, {"HOME": str(self.home)})
+        env.start()
+        self.addCleanup(env.stop)
+        os.environ.pop(home.ENV, None)
+
+    def cd(self, path):
+        was = os.getcwd()
+        os.chdir(path)
+        self.addCleanup(os.chdir, was)
+
+    def project(self) -> Path:
+        (self.work / home.LOCAL).mkdir()
+        return self.work / home.LOCAL
+
+    def run_cli(self, *argv) -> tuple[int, str, str]:
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = cli.main(list(argv))
+        return code, out.getvalue(), err.getvalue()
+
+    # -- the four rungs ------------------------------------------------
+
+    def test_the_flag_wins_over_everything(self):
+        os.environ[home.ENV] = str(self.dir / "named")
+        self.project()
+        self.assertEqual(home.resolve(self.dir / "said-so", cwd=self.work),
+                         self.dir / "said-so")
+
+    def test_the_env_var_beats_a_project_tree(self):
+        os.environ[home.ENV] = str(self.dir / "named")
+        self.project()
+        self.assertEqual(home.resolve(cwd=self.work), self.dir / "named")
+
+    def test_the_env_var_expands_a_tilde(self):
+        os.environ[home.ENV] = "~/.rouse-reviewer"
+        self.assertEqual(home.resolve(cwd=self.work),
+                         self.home / ".rouse-reviewer")
+
+    def test_a_project_tree_beats_the_global_one(self):
+        here = self.project()
+        self.assertEqual(home.resolve(cwd=self.work), here)
+
+    def test_with_no_project_tree_it_falls_through_to_the_home(self):
+        self.assertEqual(home.resolve(cwd=self.work), self.home / ".rouse")
+
+    def test_only_a_real_directory_answers_for_the_project(self):
+        (self.work / home.LOCAL).write_text("not a tree")
+        self.assertEqual(home.resolve(cwd=self.work), self.home / ".rouse")
+
+    def test_a_named_tree_that_is_not_there_is_still_the_answer(self):
+        # rungs 1 and 2 are taken as given. A path somebody typed and got
+        # wrong is worth an error; falling quietly through to a different
+        # tree is how an agent ends up writing into somebody else's
+        os.environ[home.ENV] = str(self.dir / "gone")
+        self.assertEqual(home.resolve(cwd=self.work), self.dir / "gone")
+
+    # -- the same order, through the cli -------------------------------
+
+    def test_the_cli_finds_the_global_tree_with_nothing_passed(self):
+        self.cd(self.work)
+        self.assertEqual(self.run_cli("init", "--global")[0], 0)
+        code, out, _ = self.run_cli("tree")
+        self.assertEqual(code, 0)
+        self.assertIn("example-zero-downtime-deploys", out)
+
+    def test_a_global_tree_shows_its_records_like_any_other(self):
+        self.cd(self.work)
+        self.run_cli("init", "--global")
+        self.assertIn("intention example-verify-the-staging-migration",
+                      self.run_cli("tree")[1])
+
+    def test_the_project_tree_is_the_one_written_into(self):
+        self.cd(self.work)
+        self.run_cli("init", "--global")
+        self.run_cli("init")
+        self.assertEqual(self.run_cli("new", "belief", "only-here")[0], 0)
+        self.assertIn("only-here", self.run_cli("tree")[1])
+        self.assertFalse((self.home / ".rouse" / layout.BELIEFS
+                          / "belief-only-here.md").exists())
+
+    def test_with_no_tree_anywhere_it_says_where_it_looked(self):
+        self.cd(self.work)
+        code, _, err = self.run_cli("tree")
+        self.assertEqual(code, 2)
+        self.assertIn(home.ENV, err)
+        self.assertIn("init --global", err)
+
+    # -- laying one down -----------------------------------------------
+
+    def test_init_global_lays_the_skeleton_at_the_home(self):
+        self.assertEqual(self.run_cli("init", "--global")[0], 0)
+        self.assertTrue((self.home / ".rouse" / layout.INSTRUCTIONS).is_file())
+
+    def test_init_global_does_not_take_a_directory_as_well(self):
+        self.assertEqual(self.run_cli("init", "--global", "elsewhere")[0], 2)
+        self.assertFalse((self.home / ".rouse").exists())
+
+    def test_init_will_not_lay_a_second_tree_over_the_first(self):
+        self.run_cli("init", "--global")
+        self.assertEqual(self.run_cli("init", "--global")[0], 2)
+
+    @unittest.skipUnless(shutil.which("git"), "no git on this box")
+    def test_a_global_tree_gets_a_history_of_its_own(self):
+        self.run_cli("init", "--global")
+        self.assertTrue((self.home / ".rouse" / ".git").is_dir())
+
+    @unittest.skipUnless(shutil.which("git"), "no git on this box")
+    def test_a_tree_laid_inside_a_checkout_is_left_alone(self):
+        subprocess.run(["git", "init", "-q", str(self.work)],
+                       capture_output=True, check=True)
+        self.cd(self.work)
+        self.run_cli("init")
+        self.assertFalse((self.work / home.LOCAL / ".git").exists())
+
+
 class Skeleton(unittest.TestCase):
     """What `rouse init` drops in. The examples are records like any
     other, which is exactly why they have to behave like records."""
 
     def setUp(self):
-        import contextlib
-        import io
-        from rouse import __main__ as cli
         self.dir = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.dir)
         with contextlib.redirect_stdout(io.StringIO()):
@@ -741,9 +885,6 @@ class Skeleton(unittest.TestCase):
             self.assertEqual(list(files.head(module.path) or {}), ["keywords"])
 
     def test_it_survives_its_own_linter(self):
-        import contextlib
-        import io
-        from rouse import __main__ as cli
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             code = cli.main(["check", "--memory", str(self.memory)])

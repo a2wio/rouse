@@ -106,14 +106,49 @@ def new(memory: Path, type_: str, slug: str, under: str | None = None) -> Path:
     return _write(resolve(memory, under, type_) / slug / f"{type_}.md", type_)
 
 
+def _git(cwd: Path, *argv: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", "-C", str(cwd), *argv],
+                          capture_output=True, text=True)
+
+
 def _move(src: Path, dst: Path) -> None:
     """`git mv` when there is a git to tell, so the history follows the
     record across the two trees. Plain move otherwise."""
     dst.parent.mkdir(parents=True, exist_ok=True)
-    done = subprocess.run(["git", "-C", str(src.parent), "mv", str(src),
-                           str(dst)], capture_output=True, text=True)
-    if done.returncode != 0:
+    if _git(src.parent, "mv", str(src), str(dst)).returncode != 0:
         shutil.move(str(src), str(dst))
+
+
+def git_init(tree: Path) -> bool:
+    """Give a fresh tree a history of its own, when it hasn't got one.
+
+    The record of what an agent changed its mind about is git: the
+    beliefs it held last week are one diff away, and that only survives
+    outside a project if the tree at `~/.rouse` is a repository too. A
+    tree laid down inside a checkout already has one and is left alone —
+    nothing here ever commits into somebody else's repo. No git on the
+    box is not an error; tier 0 never needed one.
+
+    Says whether it made one, because the only caller prints it: a
+    `git init` nobody mentioned is a surprise in somebody's home
+    directory.
+    """
+    if shutil.which("git") is None:
+        return False
+    inside = _git(tree, "rev-parse", "--is-inside-work-tree")
+    if inside.returncode == 0 and inside.stdout.strip() == "true":
+        return False
+    if _git(tree, "init", "-q").returncode != 0:
+        return False
+    _git(tree, "add", "-A")
+    # no name and email configured is a fine reason for this one to
+    # fail: the repository is there either way, with the skeleton
+    # staged in it, and the next commit is the writer's anyway.
+    # Signing is turned off for this one commit only — a scaffolding
+    # commit that stops to ask for a passphrase is worse than no commit
+    _git(tree, "-c", "commit.gpgsign=false", "commit", "-qm",
+         "the skeleton, before anything real")
+    return True
 
 
 def promote(memory: Path, slug: str, under: str | None = None) -> Path:

@@ -14,7 +14,9 @@ nobody parses, so write the *why* beside it.
     tier   pack (every session, local, shares a 150ms budget)
            demand (when the subject comes up; may leave the machine)
     cmd    shell. cwd is the memory directory; $MEMORY is it, $ROOT its
-           parent.
+           parent — which is a project when I live in one and the home
+           directory when I live at `~/.rouse`. Say `$MEMORY` when you
+           mean here.
     ttl    seconds a reading may be reused. demand only.
 
 ## pack — every session, local, cheap
@@ -32,11 +34,13 @@ now.
 ```probe
 name: head-commit
 tier: pack
-cmd:  git -C "$ROOT" log -1 --format='%h %s' 2>/dev/null
+cmd:  git -C "$MEMORY" log -1 --format='%h %s' 2>/dev/null
 ```
 
 What is actually committed. The answer to "did that land", which memory
-gets wrong more than anything else.
+gets wrong more than anything else. `$MEMORY` rather than `$ROOT` so it
+answers either way: inside a project it is the project's head, and at
+`~/.rouse` it is this directory's own history.
 
 ## demand — when the subject comes up
 

@@ -69,6 +69,29 @@ named command whose output *is* the answer, whose reading beats any note
 that disagrees. Memory systems are assumed to fail by forgetting. They
 fail by remembering confidently.
 
+## where the tree lives
+
+A project's tree is `./memory`. An agent with no project to stand in has
+`~/.rouse`, and that path is the convention: any agent may assume it,
+and pointing a second tool at an existing memory is a matter of not
+overriding it. Rouse looks in this order and stops at the first answer:
+
+    --memory <dir>     explicit, wins
+    $ROUSE_HOME        this agent's tree, wherever it keeps it
+    ./memory           the project you're standing in
+    ~/.rouse           the global one
+
+    python3 -m rouse init            # ./memory
+    python3 -m rouse init --global   # ~/.rouse
+
+Both give the tree its own git repository if it hasn't got one, because
+what an agent changed its mind about is a diff.
+
+**One tree per agent, always.** Two agents sharing one read each other's
+beliefs out of the same pack and get nudged about work neither of them
+took on. `ROUSE_HOME=~/.rouse-reviewer` is how the second one gets its
+own.
+
 ## install
 
 Three tiers. Each one is real on its own; you never have to reach the
@@ -94,7 +117,8 @@ beliefs and motivations in full, what is overdue, what moved recently,
 what the probes say this second. Still no daemon, but now there is a
 clock, sampled at session boundaries.
 
-    python3 -m rouse pack >> .agent/context.md
+    python3 -m rouse pack >> .agent/context.md            # ./memory or ~/.rouse
+    ROUSE_HOME=~/.rouse-oncall python3 -m rouse pack      # a named agent's
 
 **Tier 2 — `rouse sweep`.** Ticks every minute and delivers a wake the
 moment something comes due, to a file, a command, or a webhook. Only this

@@ -4,7 +4,9 @@ This directory is yours. It is not a log of what happened — it is where
 your work is scheduled, tracked and finished. A file here can come find
 you later.
 
-Read this before writing anything into `memory/`.
+Read this before writing anything in here. Where "here" is on disk —
+`./memory` in a project, `~/.rouse` otherwise — is the one thing this
+file doesn't decide; whatever pointed you at it already knows.
 
 ## two kinds of thing in here
 

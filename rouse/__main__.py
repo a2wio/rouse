@@ -1,6 +1,6 @@
 """rouse — memory with a clock.
 
-    rouse init [dir]      drop the skeleton in, print the one line to wire
+    rouse init [dir]      drop the skeleton in — --global lays it at ~/.rouse
     rouse pack            the context block, for session start
     rouse due             what the clock would wake about, one line each
     rouse sweep           the tick loop, with a wake sink
@@ -9,6 +9,9 @@
     rouse tree            the context layers and the records, as they sit
     rouse check           lint the memory tree
     rouse stamp           write provenance — for a wrapper, not the model
+
+Every verb but `init` and `stamp` finds the tree the same way: --memory,
+then $ROUSE_HOME, then ./memory, then ~/.rouse. See rouse/home.py.
 """
 
 import argparse
@@ -17,7 +20,8 @@ import sys
 import time
 from pathlib import Path
 
-from . import context, files, layout, levels, pack, probes, scaffold, sweep
+from . import (context, files, home, layout, levels, pack, probes, scaffold,
+               sweep)
 
 SKELETON = Path(__file__).resolve().parents[1] / "skeleton"
 ORIGINS = ("owner", "agent", "system", "untrusted", "unknown")
@@ -26,19 +30,23 @@ ORIGINS = ("owner", "agent", "system", "untrusted", "unknown")
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="rouse", description=__doc__.strip(),
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--memory", default=Path("memory"), type=Path,
-                    help="the memory directory (default: ./memory)")
+    where = (f"the memory tree (default: ${home.ENV}, else ./{home.LOCAL}, "
+             f"else {home.GLOBAL})")
+    ap.add_argument("--memory", default=None, type=Path, help=where)
 
     # the same flag on both sides, so `rouse --memory X pack` and
     # `rouse pack --memory X` both work. SUPPRESS is what stops the
     # subparser's default from clobbering a value given before the verb.
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--memory", type=Path, default=argparse.SUPPRESS,
-                        help="the memory directory (default: ./memory)")
+                        help=where)
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("init", help="drop the skeleton in")
-    p.add_argument("target", nargs="?", default=".", type=Path)
+    p.add_argument("target", nargs="?", type=Path)
+    p.add_argument("--global", dest="globally", action="store_true",
+                   help=f"lay it at {home.GLOBAL} — the tree an agent with "
+                        "no project to stand in still has")
 
     p = sub.add_parser("pack", help="the context block for session start",
                        parents=[common])
@@ -78,34 +86,64 @@ def main(argv=None) -> int:
     p.add_argument("files", nargs="+", type=Path)
 
     args = ap.parse_args(argv)
+    # `init` makes a tree and `stamp` writes onto files it was handed;
+    # every other verb reads one, and has to be told where it is or work
+    # it out (home.py)
+    if args.cmd not in ("init", "stamp"):
+        args.memory = home.resolve(args.memory)
+        if not args.memory.is_dir():
+            print(f"no memory tree at {home.display(args.memory)}",
+                  file=sys.stderr)
+            print("looked: " + ", ".join(home.ORDER), file=sys.stderr)
+            print(f"`rouse init` makes one here, `rouse init --global` "
+                  f"makes {home.GLOBAL}", file=sys.stderr)
+            return 2
     return globals()[f"cmd_{args.cmd}"](args)
 
 
 def cmd_init(args) -> int:
+    """Lay the skeleton down — in a project, or at the global home.
+
+    `--global` is the whole of the standard-entrypoint idea: an agent
+    with no checkout to stand in still has somewhere its memory lives,
+    and every other verb finds it without being told (spec/home.md).
+    """
     if not SKELETON.is_dir():
         print(f"no skeleton at {SKELETON} — run this from a rouse checkout",
               file=sys.stderr)
         return 2
-    target = args.target / "memory"
+    if args.globally and args.target is not None:
+        print(f"--global lays the tree at {home.GLOBAL} — it doesn't take a "
+              "directory as well", file=sys.stderr)
+        return 2
+    target = (home.tree() if args.globally
+              else (args.target or Path(".")) / home.LOCAL)
     if target.exists():
-        print(f"{target} already exists — not touching it", file=sys.stderr)
+        print(f"{home.display(target)} already exists — not touching it",
+              file=sys.stderr)
         return 2
     shutil.copytree(SKELETON / "memory", target)
-    try:
-        target = target.relative_to(Path.cwd())
-    except ValueError:
-        pass
-    print(f"wrote {target}")
+    shown = home.display(target)
+    print(f"wrote {shown}")
+    if scaffold.git_init(target):
+        print(f"git repository at {shown} — the diffs are the record of what "
+              "it changed its mind about")
     print()
     print("add one line to whatever your agent reads at session start")
     print("(CLAUDE.md, AGENTS.md, .cursor/rules, the system prompt):")
     print()
-    print(f"    Your memory lives in `{target}`. "
-          f"Read `{target}/{layout.INSTRUCTIONS}` before using it.")
+    print(f"    Your memory lives in `{shown}`. "
+          f"Read `{shown}/{layout.INSTRUCTIONS}` before using it.")
     print()
     print("that is tier 0 and it works. For the clock:")
-    print(f"    python3 -m rouse pack  --memory {target}   # at session start")
-    print(f"    python3 -m rouse sweep --memory {target}   # between sessions")
+    print(f"    python3 -m rouse pack  --memory {shown}   # at session start")
+    print(f"    python3 -m rouse sweep --memory {shown}   # between sessions")
+    if args.globally:
+        print()
+        print(f"anything run with no --memory and no ./{home.LOCAL} beside "
+              "it finds this tree on its own.")
+        print(f"one tree per agent, though — the next one gets its own with "
+              f"{home.ENV}=<dir>.")
     return 0
 
 

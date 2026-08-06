@@ -151,7 +151,11 @@ class Records:
         for path in sorted(self.memory.rglob("*.md")):
             if path.stem not in layout.TYPES:
                 continue
-            if layout.SCRATCH in path.parts:
+            # the sweeper's scratch, and only the one belonging to THIS
+            # tree. Matched anywhere in the path it also matches the
+            # global home, which is `~/.rouse` — and then every record
+            # in a global tree is invisible at once (spec/home.md)
+            if layout.SCRATCH in path.relative_to(self.memory).parts:
                 continue
             # a note may legitimately be called `task.md`; notes are
             # indexed, never swept, so the whole subtree is off limits

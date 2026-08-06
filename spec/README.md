@@ -1,8 +1,9 @@
 # the rouse spec
 
-Seven files. Read them in this order; each one assumes the ones above
+Eight files. Read them in this order; each one assumes the ones above
 it.
 
+    home.md          where the tree is, and one tree per agent
     notes.md         durable memory — the frontmatter every file carries
     probes.md        the facts you check instead of remember
     provenance.md    where a file came from, and why the model can't say
@@ -60,6 +61,10 @@ instruction file, the context layers, and the records. `inventory/` is
 what has no position at all — `notes/`, `probes.md`, `reminders/`,
 `backlog/`.
 
+**One tree per agent, and it is found, not passed.** `--memory`, then
+`$ROUSE_HOME`, then `./memory`, then `~/.rouse`. Two agents sharing a
+tree read each other's beliefs out of the same pack; see `home.md`.
+
 **One thing per record.** A record is the unit of everything: of recall,
 of staleness, of a wake. Two topics in one means two clocks fighting over
 one `last-moved`.
@@ -98,8 +103,12 @@ removed.
 
 ## what a conforming implementation must do
 
-Four things, and nothing else is required:
+Five things, and nothing else is required:
 
+0. **Find the tree in the order above** — `--memory`, `$ROUSE_HOME`,
+   `./memory`, `~/.rouse` — and never let two agents onto one. An
+   implementation that invents its own order is one an existing memory
+   can't be pointed at; see `home.md`.
 1. **Inject the context layers.** Every file in `beliefs/` and
    `motivations/`, whole, at the top of every session. They are the only
    bodies that belong in a pack.

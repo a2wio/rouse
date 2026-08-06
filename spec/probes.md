@@ -31,7 +31,9 @@ there, next to the probe, where a future reader will find it.
     name   what it's called: in the pack, and in a note's `probes:` line
     tier   pack | demand — when it runs
     cmd    shell. cwd is the memory directory; $MEMORY is it, $ROOT its
-           parent.
+           parent. `$ROOT` is the project when the tree is `./memory`
+           and is the home directory when it is `~/.rouse` — a probe
+           that means "here" should say `$MEMORY`.
     ttl    seconds a reading may be reused. demand only; pack always
            measures fresh.
 
