@@ -47,6 +47,18 @@ If the reference CLI is around, `rouse new intention pin-the-runner
 --under keep-the-deploy-trustworthy` makes the directory and the header
 in one go. If it isn't, `mkdir` and write the file — that is all it does.
 
+## the `example-` records
+
+Everything whose name starts with `example-` shipped with this
+directory: one chain of four in `entrypoint/`, plus a reminder, a
+backlog item and a note. They are scaffolding, so the shape is visible
+before anything real is written. **Nothing in them is something you
+believe, promised or were asked to do — never act on one.**
+
+They are ordinary records otherwise: walked, linted and swept like any
+other, because a shape only visible when the tooling special-cases it
+isn't the shape. Delete them when the first real record lands.
+
 ## notes — silent by default
 
     ---

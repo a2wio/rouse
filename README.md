@@ -58,6 +58,12 @@ agent already reads (CLAUDE.md, AGENTS.md, a system prompt):
 Zero processes. You get the conventions and an agent that treats a
 dropped intention as a failure.
 
+What you copy in isn't empty: it ships one example chain — belief,
+motivation, intention, task, one inside the next — plus an example
+reminder, backlog item and note, every slug prefixed `example-`. So
+`rouse tree` draws the ladder on the first run. Nothing special-cases
+them; delete them when your first real record lands.
+
 **Tier 1 — `rouse pack` at session start.** It prints one block: what is
 overdue, what moved recently, what the probes say this second. Still no
 daemon, but now there is a clock, sampled at session boundaries.

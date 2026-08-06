@@ -515,5 +515,54 @@ class Check(Tree):
         self.assertIn("not a reminder", out)
 
 
+class Skeleton(unittest.TestCase):
+    """What `rouse init` drops in. The examples are records like any
+    other, which is exactly why they have to behave like records."""
+
+    def setUp(self):
+        import contextlib
+        import io
+        from rouse import __main__ as cli
+        self.dir = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.dir)
+        with contextlib.redirect_stdout(io.StringIO()):
+            cli.main(["init", str(self.dir)])
+        self.memory = self.dir / "memory"
+
+    def test_the_example_chain_draws_the_ladder_on_the_first_run(self):
+        out = scaffold.render_tree(self.memory).splitlines()
+        chain = [line.split()[0] for line in out[:4]]
+        self.assertEqual(chain, ["belief", "motivation", "intention", "task"])
+        self.assertEqual([len(line) - len(line.lstrip()) for line in out[:4]],
+                         [0, 2, 4, 6])
+        self.assertIn("  reminder example-pay-the-invoice  [pending]", out)
+        self.assertIn("  backlog example-pin-the-runner-version  [open]", out)
+
+    def test_nothing_in_it_is_due_the_day_it_lands(self):
+        # a skeleton whose first sweep nudges about a fake record teaches
+        # the agent that nudges are noise, on day one
+        found = levels.due(levels.Records(self.memory), time.time())
+        self.assertEqual([item.id for item in found], [])
+
+    def test_every_record_in_it_says_it_is_a_placeholder(self):
+        paths = [r.path for r in levels.Records(self.memory).all()]
+        paths += pack.notes(self.memory)
+        self.assertEqual(len(paths), 7)
+        for path in paths:
+            self.assertTrue(path.parent.name.startswith("example-")
+                            or path.stem.startswith("example-"), path)
+            self.assertTrue(files.body(path).startswith("Placeholder"), path)
+
+    def test_it_survives_its_own_linter(self):
+        import contextlib
+        import io
+        from rouse import __main__ as cli
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = cli.main(["check", "--memory", str(self.memory)])
+        self.assertEqual(code, 0)
+        self.assertNotIn("error:", buf.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

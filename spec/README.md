@@ -60,6 +60,13 @@ editing a file by hand gets them right without looking anything up.
 stays where it is. The history of what you meant to do and didn't is
 worth more than the tidiness.
 
+**The examples are ordinary records.** A skeleton ships one example
+chain, every slug prefixed `example-`, so the shape is visible before
+anything has been written. No implementation may special-case that
+prefix — they are walked, linted and swept like anything else. They are
+scaffolding rather than memory, which makes them the one thing in the
+tree that is meant to be removed.
+
 ## what a conforming implementation must do
 
 Three things, and nothing else is required:
