@@ -52,6 +52,8 @@ See `/rouse/skeleton` for the memory structure template
     cd your-project
     rouse init --wire
 
+> ^ the `--wire` flag assumes you use CLAUDE.md or AGENTS.md (or any other pre-turn context filler).
+
 **Or hand it to the agent.** *(Send it this line and it does the three)*
 
     install rouse for this project: https://a2w.io/rouse/install.txt
@@ -64,6 +66,8 @@ The installation has 3 tiers available depending on how deep you want to integra
 
 **Tier 0 — Structure-only**
 
+The following is the manual version of what `rouse init` does.
+
 Copy `rouse/skeleton/memory/` in your .{agent}/memory. Then add one line in whatever
 your agent already reads (CLAUDE.md, AGENTS.md, a system prompt):
 
@@ -72,7 +76,11 @@ your agent already reads (CLAUDE.md, AGENTS.md, a system prompt):
 
 **Tier 1 — Inject clocked memories on session start (`rouse pack`)**
 
-This tier holds the memory retrieval logic and serves as a mechanism to feed a fresh session the specific memories that still require action. For example, if you've been working on a web application and you brainstormed on 7 different ideas, but implemented 4, there are 3 outstanding - what base agents are usually going to do, is tell you they'll revisit those, but forget. With `rouse pack`, this outstanding context gets appended to your new sessions's context and you start your session where you left off in your previous one.
+> ⚠️ THIS IS THE RECOMMENDED INSTALL IF YOU ARE NOT INSTALLING ROUSE INTO AN AUTONOMOUS AGENT AS IT PRETTY MUCH IS WHAT ROUSE WAS BUILT FOR
+
+The following is the manual version of what `rouse init --wire` does.
+
+> This tier holds the memory retrieval logic and serves as a mechanism to feed a fresh session the specific memories that still require action. For example, if you've been working on a web application and you brainstormed on 7 different ideas, but implemented 4, there are 3 outstanding - what base agents are usually going to do, is tell you they'll revisit those, but forget. With `rouse pack`, this outstanding context gets appended to your new sessions's context and you start your session where you left off in your previous one.
 
 To use this, you can do it manually through the CLI:
 
@@ -85,6 +93,10 @@ To use this, you can do it manually through the CLI:
 > in whole. A rule you didn't retrieve still binds; a signal only matters
 > when it's about what you're doing.
 
+Here is an example of Rouse being initialized into a fresh Claude Code session:
+
+<img src="./assets/fresh-session-example.png"/>
+
 Or, if you want to wire this into an autonomous agent to handle by its own, read the next section.
 
 ## Installation: For Autonomous Agents
@@ -96,6 +108,10 @@ Rouse works best for autonomous agents that follow a "conversational->workers" p
 For simple loop engineering, rouse has the `rouse sweep` command, which sends a ticks every minute and delivers a wake the moment something comes due: (look at intentions' markdown header to understand the logic behind rouse's nudging)
 
 Since the nature of agent memory systems is declerative (hence markdown), rouse is to be treated as model-agnostic, but in order to wire it into a model, some basic harness engineering is required to make an agent interact with static markdown files. If you are still reading, you probably have a good idea for what you'd want to use rouse, if you have one.
+
+## Installation: Global
+
+If you want to make Rouse your default memory system, you can just add the rouse.md + template into your $HOME/.{agent-of-choice} directory, and the pre-first-turn context filler instructions into your $HOME/.{agent-of-choice}/{FILLER.md}
 
 ## Closing
 
