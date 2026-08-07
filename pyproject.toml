@@ -9,6 +9,10 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
+# the install is `pip install git+…`, and this name is only ever seen
+# there. `rouse` on PyPI is a polymer-dynamics package, so a published
+# distribution would have to be called something else — decide that when
+# there is a reason to publish, not now
 name = "rouse"
 description = "Memory with a clock — it comes and finds the agent"
 readme = "README.md"
