@@ -62,27 +62,25 @@ Then open a session and ask it what it is carrying to verify if it loaded rouse 
 
 ## Installation: Continuation
 
-The installation has 3 tiers available depending on how deep you want to integrate rouse into your memory (ie. completely replace your memory, or use it as a modularization template)
+**Structure-only**
 
-**Tier 0 — Structure-only**
+Copy `rouse/skeleton/memory/` in your .{agent}/memory.
 
-The following is the manual version of what `rouse init` does.
+```
+cp -r /path/to/rouse/skeleton/memory ~/path/to/project/memory
+```
 
-Copy `rouse/skeleton/memory/` in your .{agent}/memory. Then add one line in whatever
-your agent already reads (CLAUDE.md, AGENTS.md, a system prompt):
+Then add one line in whatever your agent already reads (CLAUDE.md, AGENTS.md, a system prompt):
 
-    Your memory lives in `memory/`. Read `memory/entrypoint/rouse.md`
-    before using it.
+```
+echo "Your memory lives in `memory/`. Read `memory/entrypoint/rouse.md` before using it > /path/to/project/{AGENTS|CLAUDE|WHATEVER}.md
+```
 
-**Tier 1 — Inject clocked memories on session start (`rouse pack`)**
+**Clocked memories on session start (`rouse pack`)**
 
 > ⚠️ THIS IS THE RECOMMENDED INSTALL IF YOU ARE NOT INSTALLING ROUSE INTO AN AUTONOMOUS AGENT AS IT PRETTY MUCH IS WHAT ROUSE WAS BUILT FOR
 
 The following is the manual version of what `rouse init --wire` does.
-
-> This tier holds the memory retrieval logic and serves as a mechanism to feed a fresh session the specific memories that still require action. For example, if you've been working on a web application and you brainstormed on 7 different ideas, but implemented 4, there are 3 outstanding - what base agents are usually going to do, is tell you they'll revisit those, but forget. With `rouse pack`, this outstanding context gets appended to your new sessions's context and you start your session where you left off in your previous one.
-
-To use this, you can do it manually through the CLI:
 
     rouse pack >> .agent/context.md            # ./memory or ~/.rouse
     ROUSE_HOME=~/.rouse-oncall rouse pack      # a named agent's
@@ -103,7 +101,7 @@ Or, if you want to wire this into an autonomous agent to handle by its own, read
 
 Rouse works best for autonomous agents that follow a "conversational->workers" pattern.
 
-**Tier 2 — loop-bound context retrieval.**
+**Looped context retrieval.**
 
 For simple loop engineering, rouse has the `rouse sweep` command, which sends a ticks every minute and delivers a wake the moment something comes due: (look at intentions' markdown header to understand the logic behind rouse's nudging)
 
@@ -111,7 +109,17 @@ Since the nature of agent memory systems is declerative (hence markdown), rouse 
 
 ## Installation: Global
 
-If you want to make Rouse your default memory system, you can just add the rouse.md + template into your $HOME/.{agent-of-choice} directory, and the pre-first-turn context filler instructions into your $HOME/.{agent-of-choice}/{FILLER.md}
+If you want to make Rouse your default memory system, you can just add the rouse.md + template into your $HOME/.{agent-of-choice} directory:
+
+```
+cp -r rouse/skeleton/memory ~/.{agent-of-choice}/
+```
+
+and the pre-first-turn context filler instructions into your $HOME/.{agent-of-choice}/{FILLER.md}:
+
+```
+echo "Your memory lives in `memory/`. Read `memory/entrypoint/rouse.md` before using it > ~/.{agent-of-choice}/{FILLER}.md
+```
 
 ## Closing
 
