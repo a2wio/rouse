@@ -25,10 +25,10 @@ dynamic = ["version"]
 Homepage = "https://github.com/a2wio/rouse"
 
 [project.scripts]
-rouse = "rouse.__main__:main"
+rouse = "rouse.cli:main"
 
 [tool.setuptools]
-packages = ["rouse", "rouse.tests"]
+packages = ["rouse", "rouse.core", "rouse.addons", "rouse.cli", "rouse.tests"]
 
 [tool.setuptools.dynamic]
 version = { attr = "rouse.__version__" }

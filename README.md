@@ -179,7 +179,15 @@ and be started by something, it can be roused.
     spec/            the conventions, one file per idea. This is the product.
     design/          the clock — the two seams and the delivery contract
     rouse/           a reference implementation. stdlib python, no deps.
-    rouse/skeleton/  the drop-in memory/, shipped inside the package
+      core/          find the tree, read it, hand over the pack, run the clock
+      addons/        what a minimal install could live without
+      cli/           arg parsing, and one call per verb into the two above
+      skeleton/      the drop-in memory/, shipped inside the package
+
+`core/` is the whole of what rouse promises: an agent that only gets a
+context block at session start and a nudge when something stops moving
+needs those eight modules and nothing else. Nothing in there imports
+from `addons/` or `cli/`, which is how that claim stays true.
 
 `pip install` puts `rouse` on the path and nothing else on your machine —
 there are no dependencies, and there won't be any. You can also skip the

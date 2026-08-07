@@ -19,7 +19,12 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from . import context, files, layout, levels
+from ..core import context, files, layout, levels
+
+# inside the package, so it survives a `pip install`: an installed rouse
+# whose `init` needs the checkout it was built from is an install that
+# only works for whoever built it
+SKELETON = Path(__file__).resolve().parents[1] / "skeleton"
 
 # what each level owes, in the order it reads best. `{now}` and `{day}`
 # are filled in; anything left blank is the writer's job.
@@ -61,6 +66,13 @@ TEMPLATES: dict[str, tuple[list[tuple[str, str]], str]] = {
                 "What it is, why it's worth doing, and what was said when "
                 "it got parked.\n"),
 }
+
+
+def lay(target: Path) -> None:
+    """The skeleton, into a tree that isn't there yet. Never over one
+    that is — the caller checks, because the caller is the one with
+    somewhere to say so."""
+    shutil.copytree(SKELETON / "memory", target)
 
 
 def blanks(path: Path) -> list[str]:

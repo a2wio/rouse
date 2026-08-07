@@ -28,7 +28,7 @@ import os
 import shutil
 from pathlib import Path
 
-from . import home, layout
+from ..core import home, layout
 
 # the files an agent reads at session start without being asked to.
 # Anything else — .cursor/rules, a system prompt in somebody's harness —

@@ -55,8 +55,8 @@ The due-arithmetic has two callers and they must never disagree:
 
 If the pack says two and the daemon nudges about three, the operator
 stops believing both. Put the arithmetic in one place and import it
-twice — in `rouse/` that is `levels.py`, read by `sweep.py` and
-`pack.py`.
+twice — in `rouse/` that is `core/levels.py`, read by `core/sweep.py`
+and `core/pack.py`.
 
 ## seam one: injection
 
