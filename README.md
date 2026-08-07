@@ -109,11 +109,34 @@ own.
 
 ## install
 
+    pip install git+https://github.com/a2wio/rouse
+    cd your-project
+    rouse init --wire
+
+That is the whole of it. `init` lays `memory/` down; `--wire` appends a
+short block to the `CLAUDE.md` or `AGENTS.md` you already have, telling
+the agent to run `rouse pack` at session start and to read
+`memory/entrypoint/rouse.md` before it writes anything. Both files if you
+have both. Nothing you didn't already have gets created — with neither of
+them it prints the block and says where to put it — and a second run
+appends nothing, so a reinstall is safe.
+
+**Or hand it to the agent.** Send it this line and it does the three
+above:
+
+    install rouse for this project: https://a2w.io/rouse/install.txt
+
+Then open a session and ask it what it is carrying. Nothing else changes
+about how you work: the agent runs one command at the start and writes
+files instead of forgetting.
+
+## how much of it you run
+
 Three tiers. Each one is real on its own; you never have to reach the
 last.
 
-**Tier 0 — copy `skeleton/memory/` in.** Then one line in whatever your
-agent already reads (CLAUDE.md, AGENTS.md, a system prompt):
+**Tier 0 — copy `rouse/skeleton/memory/` in.** Then one line in whatever
+your agent already reads (CLAUDE.md, AGENTS.md, a system prompt):
 
     Your memory lives in `memory/`. Read `memory/entrypoint/rouse.md`
     before using it.
@@ -132,9 +155,9 @@ persona if you wrote one, your beliefs and motivations in full, what is
 overdue, what moved recently, what the probes say this second. Still no
 daemon, but now there is a clock, sampled at session boundaries.
 
-    python3 -m rouse pack >> .agent/context.md            # ./memory or ~/.rouse
-    ROUSE_HOME=~/.rouse-oncall python3 -m rouse pack      # a named agent's
-    python3 -m rouse pack --query "$PROMPT"               # thin the signals
+    rouse pack >> .agent/context.md            # ./memory or ~/.rouse
+    ROUSE_HOME=~/.rouse-oncall rouse pack      # a named agent's
+    rouse pack --query "$PROMPT"               # thin the signals
 
 `--query` is optional and only ever touches the motivations: the ones it
 doesn't match shrink to a line, and the persona and every belief still go
@@ -153,14 +176,16 @@ and be started by something, it can be roused.
 
 ## the repo
 
-    spec/       the conventions, one file per idea. This is the product.
-    skeleton/   the drop-in memory/
-    design/     the clock — the two seams and the delivery contract
-    rouse/      a reference implementation. stdlib python, no deps.
+    spec/            the conventions, one file per idea. This is the product.
+    design/          the clock — the two seams and the delivery contract
+    rouse/           a reference implementation. stdlib python, no deps.
+    rouse/skeleton/  the drop-in memory/, shipped inside the package
 
-There is no PyPI package and no install step. `rouse/` is a plain python
-package: vendor the directory, or run it out of a checkout. Every
-`rouse …` above means `python3 -m rouse …`.
+`pip install` puts `rouse` on the path and nothing else on your machine —
+there are no dependencies, and there won't be any. You can also skip the
+install entirely: `rouse/` is a plain python package, so vendor the
+directory or run it out of a checkout, and every `rouse …` above becomes
+`python3 -m rouse …`.
 
     python3 -m rouse init ./scratch
     python3 -m rouse --memory ./scratch/memory tree

@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from rouse import __main__ as cli  # noqa: E402
 from rouse import (context, files, home, layout, levels, pack,  # noqa: E402
-                   probes, scaffold, sweep)
+                   probes, scaffold, sweep, wire)
 
 HOUR = 3600
 LADDER = layout.INTENTIONS
@@ -1147,6 +1147,112 @@ class Home(unittest.TestCase):
         self.assertFalse((self.work / home.LOCAL / ".git").exists())
 
 
+class Wire(unittest.TestCase):
+    """`rouse init --wire`: the block, into the file the agent already
+    reads.
+
+    This is the step that decides whether anything else in here ever
+    runs. A tree nobody told the model about is a tree that stays empty,
+    so the flag is worth the same care as the sweep.
+    """
+
+    def setUp(self):
+        self.dir = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.dir)
+        self.home = self.dir / "home"
+        self.proj = self.dir / "proj"
+        self.home.mkdir()
+        self.proj.mkdir()
+        env = mock.patch.dict(os.environ, {"HOME": str(self.home)})
+        env.start()
+        self.addCleanup(env.stop)
+        os.environ.pop(home.ENV, None)
+
+    def reads(self, name: str, text: str = "# the project\n") -> Path:
+        """A file the agent reads at session start, already in the repo."""
+        path = self.proj / name
+        path.write_text(text)
+        return path
+
+    def init(self, *argv) -> tuple[int, str, str]:
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = cli.main(["init", *argv])
+        return code, out.getvalue(), err.getvalue()
+
+    def test_it_appends_to_the_file_the_agent_already_reads(self):
+        claude = self.reads("CLAUDE.md")
+        code, out, _ = self.init(str(self.proj), "--wire")
+        self.assertEqual(code, 0)
+        text = claude.read_text()
+        self.assertIn(wire.MARKER, text)
+        self.assertIn("rouse pack", text)
+        self.assertIn(f"memory/{layout.INSTRUCTIONS}", text)
+        self.assertIn("rouse due", text)
+        self.assertIn("wired", out)
+
+    def test_what_was_already_in_the_file_stays_in_it(self):
+        claude = self.reads("CLAUDE.md", "# rules\n\nnever push to main.\n")
+        self.init(str(self.proj), "--wire")
+        self.assertIn("never push to main.", claude.read_text())
+
+    def test_both_of_them_when_a_project_has_both(self):
+        files_ = [self.reads(name) for name in wire.FILES]
+        self.init(str(self.proj), "--wire")
+        for path in files_:
+            self.assertIn(wire.MARKER, path.read_text(), path.name)
+
+    def test_a_second_wire_does_not_append_twice(self):
+        claude = self.reads("CLAUDE.md")
+        self.init(str(self.proj), "--wire")
+        code, out, _ = self.init(str(self.proj), "--wire")
+        # a tree that is already there is news rather than an error when
+        # --wire is on: a reinstall has to be able to reach the wiring,
+        # and this is the run the marker exists for
+        self.assertEqual(code, 0)
+        self.assertEqual(claude.read_text().count(wire.MARKER), 1)
+        self.assertIn("already wired", out)
+
+    def test_a_tree_somebody_laid_yesterday_can_still_be_wired(self):
+        claude = self.reads("CLAUDE.md")
+        self.assertEqual(self.init(str(self.proj))[0], 0)
+        self.assertNotIn(wire.MARKER, claude.read_text())
+        self.assertEqual(self.init(str(self.proj), "--wire")[0], 0)
+        self.assertIn(wire.MARKER, claude.read_text())
+
+    def test_without_the_flag_an_existing_tree_is_still_an_error(self):
+        self.init(str(self.proj))
+        code, _, err = self.init(str(self.proj))
+        self.assertEqual(code, 2)
+        self.assertIn("already exists", err)
+
+    def test_with_no_agent_file_it_prints_the_block_and_makes_nothing(self):
+        code, out, _ = self.init(str(self.proj), "--wire")
+        self.assertEqual(code, 0)
+        self.assertIn(wire.MARKER, out)
+        for name in wire.FILES:
+            self.assertFalse((self.proj / name).exists(), name)
+            self.assertIn(name, out)
+
+    def test_the_global_tree_has_no_project_to_wire(self):
+        code, out, _ = self.init("--global", "--wire")
+        self.assertEqual(code, 0)
+        self.assertIn(wire.MARKER, out)
+        self.assertIn(f"~/.rouse/{layout.INSTRUCTIONS}", out)
+        for name in wire.FILES:
+            self.assertFalse((self.home / name).exists(), name)
+
+    def test_the_block_names_the_command_that_works_on_this_box(self):
+        """It is an instruction a model runs verbatim. Vendored, there is
+        no `rouse` on the path and the block has to say so."""
+        tree = self.proj / home.LOCAL
+        with mock.patch.object(shutil, "which", return_value="/usr/bin/rouse"):
+            self.assertIn("`rouse pack`", wire.block(tree, self.proj))
+        with mock.patch.object(shutil, "which", return_value=None):
+            self.assertIn("`python3 -m rouse pack`", wire.block(tree,
+                                                               self.proj))
+
+
 class Skeleton(unittest.TestCase):
     """What `rouse init` drops in. The examples are records like any
     other, which is exactly why they have to behave like records."""
@@ -1157,6 +1263,14 @@ class Skeleton(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()):
             cli.main(["init", str(self.dir)])
         self.memory = self.dir / "memory"
+
+    def test_it_ships_inside_the_package(self):
+        """`pip install` takes the package and nothing beside it. A
+        skeleton one directory up is an install that works right up until
+        the first `rouse init`, on somebody else's machine."""
+        self.assertEqual(cli.SKELETON.parent.name, "rouse")
+        self.assertTrue((cli.SKELETON / "memory"
+                         / layout.INSTRUCTIONS).is_file())
 
     def test_it_draws_both_shapes_on_the_first_run(self):
         out = scaffold.render_tree(self.memory).splitlines()

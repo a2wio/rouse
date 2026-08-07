@@ -152,6 +152,6 @@ Five things, and nothing else is required:
 
 Everything else — the pack format, the probe runner, the linter, `new`
 and `promote` — is convenience. `rouse/` implements all of it in stdlib
-python, comments included, in under fourteen hundred lines. That number
+python, comments included, in under twenty-five hundred lines. That number
 is the real claim being made here: this is a set of agreements, not a
 platform.

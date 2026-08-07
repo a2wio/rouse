@@ -1,0 +1,36 @@
+# Packaging exists for one line of the install — `pip install …` and
+# then `rouse` on the path — and for nothing else. No dependencies, and
+# there never will be any: the claim this repo makes is that the whole
+# of it is stdlib python, and a requirements list is the first thing
+# that stops being true.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rouse"
+description = "Memory with a clock — it comes and finds the agent"
+readme = "README.md"
+# `str | None` in annotations, and the walrus everywhere
+requires-python = ">=3.10"
+dependencies = []
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/a2wio/rouse"
+
+[project.scripts]
+rouse = "rouse.__main__:main"
+
+[tool.setuptools]
+packages = ["rouse", "rouse.tests"]
+
+[tool.setuptools.dynamic]
+version = { attr = "rouse.__version__" }
+
+# the skeleton is data, not code, and it has to be in the wheel: `rouse
+# init` with nothing to copy is the install working right up until the
+# first command
+[tool.setuptools.package-data]
+rouse = ["skeleton/**/*"]

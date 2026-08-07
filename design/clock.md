@@ -129,7 +129,7 @@ tone; it only counts.
 produces from it should read as the agent thinking of the thing again.
 That is a prompt concern rather than a clock concern, but it is where
 most of these systems feel like software, so it belongs in the
-instruction file — see `skeleton/memory/entrypoint/rouse.md`.
+instruction file — see `rouse/skeleton/memory/entrypoint/rouse.md`.
 
 ## delivery, and what is deliberately not here
 

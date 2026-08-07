@@ -1,6 +1,7 @@
 """rouse — memory with a clock.
 
-    rouse init [dir]      drop the skeleton in — --global lays it at ~/.rouse
+    rouse init [dir]      drop the skeleton in — --wire tells the agent,
+                          --global lays it at ~/.rouse
     rouse pack            the context block, for session start
     rouse due             what the clock would wake about, one line each
     rouse sweep           the tick loop, with a wake sink
@@ -21,9 +22,12 @@ import time
 from pathlib import Path
 
 from . import (context, files, home, layout, levels, pack, probes, scaffold,
-               sweep)
+               sweep, wire)
 
-SKELETON = Path(__file__).resolve().parents[1] / "skeleton"
+# inside the package, so it survives a `pip install`: an installed rouse
+# whose `init` needs the checkout it was built from is an install that
+# only works for whoever built it
+SKELETON = Path(__file__).resolve().parent / "skeleton"
 ORIGINS = ("owner", "agent", "system", "untrusted", "unknown")
 
 
@@ -47,6 +51,11 @@ def main(argv=None) -> int:
     p.add_argument("--global", dest="globally", action="store_true",
                    help=f"lay it at {home.GLOBAL} — the tree an agent with "
                         "no project to stand in still has")
+    p.add_argument("--wire", action="store_true",
+                   help="and tell the agent: append the block to the "
+                        f"{' / '.join(wire.FILES)} already in the project. "
+                        "Never makes one that isn't there, never appends "
+                        "twice")
 
     p = sub.add_parser("pack", help="the context block for session start",
                        parents=[common])
@@ -112,6 +121,12 @@ def cmd_init(args) -> int:
     `--global` is the whole of the standard-entrypoint idea: an agent
     with no checkout to stand in still has somewhere its memory lives,
     and every other verb finds it without being told (spec/home.md).
+
+    `--wire` is the step after, done in the same run, because a tree the
+    agent was never told about is the commonest way this ends up doing
+    nothing (rouse/wire.py). It is also the one flag with something left
+    to do when the tree is already there, so with it an existing
+    `memory/` is news rather than an error.
     """
     if not SKELETON.is_dir():
         print(f"no skeleton at {SKELETON} — run this from a rouse checkout",
@@ -123,26 +138,33 @@ def cmd_init(args) -> int:
         return 2
     target = (home.tree() if args.globally
               else (args.target or Path(".")) / home.LOCAL)
-    if target.exists():
-        print(f"{home.display(target)} already exists — not touching it",
-              file=sys.stderr)
-        return 2
-    shutil.copytree(SKELETON / "memory", target)
     shown = home.display(target)
-    print(f"wrote {shown}")
-    if scaffold.git_init(target):
-        print(f"git repository at {shown} — the diffs are the record of what "
-              "it changed its mind about")
+    if target.exists():
+        if not args.wire:
+            print(f"{shown} already exists — not touching it",
+                  file=sys.stderr)
+            return 2
+        print(f"{shown} already exists — leaving it alone")
+    else:
+        shutil.copytree(SKELETON / "memory", target)
+        print(f"wrote {shown}")
+        if scaffold.git_init(target):
+            print(f"git repository at {shown} — the diffs are the record of "
+                  "what it changed its mind about")
     print()
-    print("add one line to whatever your agent reads at session start")
-    print("(CLAUDE.md, AGENTS.md, .cursor/rules, the system prompt):")
-    print()
-    print(f"    Your memory lives in `{shown}`. "
-          f"Read `{shown}/{layout.INSTRUCTIONS}` before using it.")
-    print()
-    print("that is tier 0 and it works. For the clock:")
-    print(f"    python3 -m rouse pack  --memory {shown}   # at session start")
-    print(f"    python3 -m rouse sweep --memory {shown}   # between sessions")
+    if args.wire:
+        _wire(args, target)
+    else:
+        run = wire.cli()
+        print("add one line to whatever your agent reads at session start")
+        print("(CLAUDE.md, AGENTS.md, .cursor/rules, the system prompt):")
+        print()
+        print(f"    Your memory lives in `{shown}`. "
+              f"Read `{shown}/{layout.INSTRUCTIONS}` before using it.")
+        print()
+        print("that is tier 0 and it works. For the clock:")
+        print(f"    {run} pack  --memory {shown}   # at session start")
+        print(f"    {run} sweep --memory {shown}   # between sessions")
     # the one layer the skeleton deliberately doesn't ship, so this line
     # is the only place a person finds out it exists
     print()
@@ -159,6 +181,44 @@ def cmd_init(args) -> int:
         print(f"one tree per agent, though — the next one gets its own with "
               f"{home.ENV}=<dir>.")
     return 0
+
+
+def _wire(args, target: Path) -> None:
+    """`--wire`: the block, into the files this project already has.
+
+    Everything it can't do, it prints instead. A wire that quietly
+    created a `CLAUDE.md` in a repo that never had one would be an
+    install that looks finished and is read by nobody, which is the
+    exact failure `--wire` exists to remove.
+    """
+    def paste(where: str, text: str) -> None:
+        print(f"paste this into {where}:")
+        print()
+        print("\n".join(f"    {line}" if line else ""
+                        for line in text.splitlines()))
+
+    root = target.parent
+    names = " or ".join(wire.FILES)
+    if args.globally:
+        # ~/.rouse has no project around it, and what this agent reads at
+        # session start is its own global config — a file in somebody's
+        # home directory that `init` has no business appending to
+        print(f"nothing to wire: {home.GLOBAL} has no project around it.")
+        paste("whatever this agent reads at session start "
+              "(~/.claude/CLAUDE.md,\n~/.codex/AGENTS.md, a system prompt)",
+              wire.block(target))
+    elif done := wire.wire(root, target):
+        for path, appended in done:
+            print(f"{'wired' if appended else 'already wired'} "
+                  f"{home.display(path)}")
+    else:
+        print(f"no {names} in {home.display(root)} — nothing wired.")
+        print("rouse doesn't make a file your agent hasn't got.")
+        paste(f"whichever one it reads ({names})", wire.block(target, root))
+    print()
+    print("the pack is tier 1, at session start. Tier 2 is the clock:")
+    print(f"    {wire.cli()} sweep --memory {home.display(target)}   "
+          "# between sessions")
 
 
 def cmd_pack(args) -> int:
