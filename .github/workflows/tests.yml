@@ -1,0 +1,27 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m unittest discover -s rouse/tests -t .
+      # the skeleton has to survive its own linter
+      - run: python3 -m rouse init ./scratch && python3 -m rouse --memory ./scratch/memory check
+      # and the install the README promises: a wheel, `rouse` on the
+      # path, a skeleton it can still find, and a wired CLAUDE.md
+      - run: pip install .
+      - run: |
+          mkdir wired && printf '# ci\n' > wired/CLAUDE.md
+          cd wired
+          rouse init --wire
+          grep -q '<!-- rouse -->' CLAUDE.md
+          rouse check

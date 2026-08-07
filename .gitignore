@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.rouse-tmp
+
+# the sweeper's own scratch: cached demand readings and undelivered wakes
+.rouse/
+
+# `rouse init ./scratch`, which CI and the README both do
+scratch/
+
+# CI's `rouse init --wire` in a project with a CLAUDE.md
+wired/
+
+# a wheel built out of the checkout
+build/
+dist/
+*.egg-info/
