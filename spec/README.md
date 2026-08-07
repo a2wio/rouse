@@ -1,5 +1,9 @@
 # the rouse spec
 
+> ⚠️ FOR HUMANS: This file and this directory is entirely for agents context. It holds the entire 'spec' for the project with the intention to make work with AI agents easier in the cases where one is not letting an AI agent read the entire code before implementing.
+>
+> In a way, a "source of truth" for the initial state of the repository. It will probably get cut in future development as specs are prone to degradation.
+
 Nine files. Read them in this order; each one assumes the ones above it.
 
     home.md          where the tree is, and one tree per agent
