@@ -16,6 +16,7 @@ Run: python3 -m unittest discover -s rouse/tests -t .
 import contextlib
 import io
 import json
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -338,6 +339,23 @@ class Connection(unittest.TestCase):
     def test_a_password_with_url_escapes_survives(self):
         env = neon.pgenv("postgresql://me:p%40ss%2Fword@host/db")
         self.assertEqual(env["PGPASSWORD"], "p@ss/word")
+
+    def test_a_cli_that_never_answers_becomes_the_sentence_that_fixes_it(self):
+        """A cli that stops answering is ended and reported, not waited
+        on — the output is captured, so a wait here is a terminal with
+        nothing on it."""
+        with mock.patch.object(neon, "CLI_WAIT", 1):
+            with self.assertRaises(neon.Fail) as caught:
+                neon._out([sys.executable, "-c", "import time; time.sleep(9)"])
+        self.assertIn("login", str(caught.exception))
+
+    def test_the_cli_is_never_handed_this_terminal(self):
+        """Nothing it runs is interactive, so nothing it runs gets to ask
+        — a prompt down there is a hang up here."""
+        with mock.patch.object(subprocess, "run") as ran:
+            ran.return_value = subprocess.CompletedProcess([], 0, " ok\n", "")
+            self.assertEqual(neon._out(["neonctl", "branches", "list"]), "ok")
+        self.assertEqual(ran.call_args.kwargs["stdin"], subprocess.DEVNULL)
 
 
 if __name__ == "__main__":

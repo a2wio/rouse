@@ -72,6 +72,15 @@ SQL = Path(__file__).resolve().parent / "schema.sql"
 ENV_BRANCH = "ROUSE_NEON_BRANCH"
 ENV_URI = "ROUSE_NEON_URI"
 
+# how long the neon cli gets to answer, and it sits deliberately above
+# `neonctl`'s own: with no credential it goes looking for a browser and
+# gives up on it after sixty seconds, printing nothing in between. That
+# minute is its error to report, not ours to pre-empt. This is only the
+# backstop under it — a call still running at a minute and a half is one
+# that isn't coming back, and a command that hangs silently is worse than
+# one that fails.
+CLI_WAIT = 90
+
 # where psql hides when it isn't on the path. libpq is keg-only under
 # homebrew, which is the commonest case by a distance.
 PSQL_ELSEWHERE = ("/opt/homebrew/opt/libpq/bin/psql",
@@ -111,8 +120,21 @@ def psql_bin() -> str:
 
 
 def _out(argv: list[str]) -> str:
+    """The neon cli, once. Its stdout, or the line that fixes it.
+
+    Nothing it is asked to do is interactive, so stdin is closed on the
+    way in: a prompt down there would be a hang up here, with the output
+    captured and nobody watching.
+    """
     try:
-        done = subprocess.run(argv, capture_output=True, text=True)
+        done = subprocess.run(argv, capture_output=True, text=True,
+                              stdin=subprocess.DEVNULL, timeout=CLI_WAIT)
+    except subprocess.TimeoutExpired:
+        raise Fail(f"{Path(argv[0]).name} didn't answer in {CLI_WAIT}s. If it "
+                   "has no credential it is waiting for a login it can't ask "
+                   "you for: `neonctl auth` once on this machine, or set "
+                   f"$NEON_API_KEY, or ${ENV_URI} if this box should never "
+                   "log in") from None
     except OSError as exc:
         raise Fail(f"{Path(argv[0]).name}: {exc}") from None
     if done.returncode != 0:

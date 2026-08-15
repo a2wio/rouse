@@ -21,12 +21,21 @@ database costs a re-sync and nothing else.
 - `database:` — which database in it. `neondb` unless you made another.
 - `branch:` — add this line to pin the tree to one neon branch. With no
   line it uses the project's default.
+- `role:` — add this line if the branch has more than one postgres role.
+  A project shared with an application usually does, and `neonctl` will
+  not guess between them.
 - `skills:` — written by `rouse plugin add`: where the skill was laid
   down, so `rouse plugin remove` can take back exactly that and nothing
   else. Not yours to edit.
 
 The connection itself is `neonctl`'s job. Nothing here stores a
-connection string, prints one, or puts one on a command line.
+connection string, prints one, or puts one on a command line. It logs in
+one of three ways, in this order: `$ROUSE_NEON_URI` if the box has a
+connection string and no login, `$NEON_API_KEY` for anything headless —
+CI, a daemon, a container — and otherwise whatever `neonctl auth` left
+behind. With none of the three, `neonctl` goes looking for a browser and
+spends a silent minute waiting for one, so a fresh box fails slowly
+before it fails clearly. Set one of the three first.
 
 ## how it is used
 
