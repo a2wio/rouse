@@ -64,16 +64,16 @@ Then open a session and ask it what it is carrying to verify if it loaded rouse 
 
 **Structure-only**
 
-Copy `rouse/skeleton/memory/` in your .{agent}/memory.
+Copy `rouse/skeleton/tree/` in as `.rouse/`.
 
 ```
-cp -r /path/to/rouse/skeleton/memory ~/path/to/project/memory
+cp -r /path/to/rouse/skeleton/tree ~/path/to/project/.rouse
 ```
 
 Then add one line in whatever your agent already reads (CLAUDE.md, AGENTS.md, a system prompt):
 
 ```
-echo "Your memory lives in `memory/`. Read `memory/entrypoint/rouse.md` before using it > /path/to/project/{AGENTS|CLAUDE|WHATEVER}.md
+echo "Your memory lives in `.rouse/`. Read `.rouse/entrypoint/rouse.md` before using it > /path/to/project/{AGENTS|CLAUDE|WHATEVER}.md
 ```
 
 **Clocked memories on session start (`rouse pack`)**
@@ -82,7 +82,7 @@ echo "Your memory lives in `memory/`. Read `memory/entrypoint/rouse.md` before u
 
 The following is the manual version of what `rouse init --wire` does.
 
-    rouse pack >> .agent/context.md            # ./memory or ~/.rouse
+    rouse pack >> .agent/context.md            # ./.rouse or ~/.rouse
     ROUSE_HOME=~/.rouse-oncall rouse pack      # a named agent's
     rouse pack --query "$PROMPT"               # thin the signals
 
@@ -112,13 +112,13 @@ Since the nature of agent memory systems is declerative (hence markdown), rouse 
 If you want to make Rouse your default memory system, you can just add the rouse.md + template into your $HOME/.{agent-of-choice} directory:
 
 ```
-cp -r rouse/skeleton/memory ~/.{agent-of-choice}/
+cp -r rouse/skeleton/tree ~/.{agent-of-choice}/.rouse
 ```
 
 and the pre-first-turn context filler instructions into your $HOME/.{agent-of-choice}/{FILLER.md}:
 
 ```
-echo "Your memory lives in `memory/`. Read `memory/entrypoint/rouse.md` before using it > ~/.{agent-of-choice}/{FILLER}.md
+echo "Your memory lives in `.rouse/`. Read `.rouse/entrypoint/rouse.md` before using it > ~/.{agent-of-choice}/{FILLER}.md
 ```
 
 ## Closing
@@ -135,8 +135,8 @@ directory or run it out of a checkout, and every `rouse …` above becomes
 `python3 -m rouse …`.
 
     python3 -m rouse init ./scratch
-    python3 -m rouse --memory ./scratch/memory tree
-    python3 -m rouse --memory ./scratch/memory check
+    python3 -m rouse --memory ./scratch/.rouse tree
+    python3 -m rouse --memory ./scratch/.rouse check
 
 Read `spec/README.md` next. It is short, and it is the actual product;
 the code is there to prove the conventions are mechanical, not to be the

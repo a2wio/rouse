@@ -85,8 +85,10 @@ PROBES = "inventory/probes.md"
 REMINDERS = "inventory/reminders"
 BACKLOG = "inventory/backlog"
 
-# the sweeper's own scratch: cached demand readings, undelivered wakes
-SCRATCH = ".rouse"
+# the sweeper's own scratch: cached demand readings, undelivered wakes.
+# Not `.rouse` any more — the tree itself is called that now, and
+# `.rouse/.rouse/` is a directory nobody would guess the meaning of
+SCRATCH = ".scratch"
 
 # the two flat `<type>-<slug>.md` layers, in the order the pack prints
 # them. `persona` is context too but is not in here: it is one fixed file

@@ -740,6 +740,29 @@ class Home(unittest.TestCase):
         (self.work / home.LOCAL).write_text("not a tree")
         self.assertEqual(home.resolve(cwd=self.work), self.home / ".rouse")
 
+    def test_a_tree_from_before_the_rename_is_still_found(self):
+        """`./memory` was rung 3 until the tree got its own name. An
+        upgrade that stopped finding one would be an agent that had
+        forgotten everything, with nothing said about it."""
+        was = self.work / home.WAS / layout.INSTRUCTIONS
+        was.parent.mkdir(parents=True)
+        was.write_text("the instructions")
+        self.assertEqual(home.resolve(cwd=self.work), self.work / home.WAS)
+
+    def test_a_project_that_merely_has_a_memory_directory_is_not_one(self):
+        """The reason the rung above checks for the instruction file:
+        `memory/` is somebody's source directory in plenty of repos, and
+        writing an agent's beliefs into one would be worse than not
+        finding a tree at all."""
+        (self.work / home.WAS / "embeddings").mkdir(parents=True)
+        self.assertEqual(home.resolve(cwd=self.work), self.home / ".rouse")
+
+    def test_the_new_name_wins_over_the_old_one(self):
+        (self.work / home.WAS / layout.INSTRUCTIONS).parent.mkdir(parents=True)
+        (self.work / home.WAS / layout.INSTRUCTIONS).write_text("older")
+        here = self.project()
+        self.assertEqual(home.resolve(cwd=self.work), here)
+
     def test_a_named_tree_that_is_not_there_is_still_the_answer(self):
         # rungs 1 and 2 are taken as given. A path somebody typed and got
         # wrong is worth an error; falling quietly through to a different

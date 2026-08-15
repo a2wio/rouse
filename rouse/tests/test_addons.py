@@ -347,7 +347,7 @@ class Wire(unittest.TestCase):
         text = claude.read_text()
         self.assertIn(wire.MARKER, text)
         self.assertIn("rouse pack", text)
-        self.assertIn(f"memory/{layout.INSTRUCTIONS}", text)
+        self.assertIn(f"{home.LOCAL}/{layout.INSTRUCTIONS}", text)
         self.assertIn("rouse due", text)
         self.assertIn("wired", out)
 

@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from rouse.core import context, files, layout, levels  # noqa: E402
+from rouse.core import context, files, home, layout, levels  # noqa: E402
 
 HOUR = 3600
 LADDER = layout.INTENTIONS
@@ -26,7 +26,7 @@ def stamp(offset_s: float) -> str:
 class Tree(unittest.TestCase):
     def setUp(self):
         self.dir = Path(tempfile.mkdtemp())
-        self.memory = self.dir / "memory"
+        self.memory = self.dir / home.LOCAL
         for name in (layout.BELIEFS, layout.MOTIVATIONS, layout.INTENTIONS,
                      layout.NOTES, layout.REMINDERS, layout.BACKLOG):
             (self.memory / name).mkdir(parents=True)

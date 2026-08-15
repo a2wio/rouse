@@ -58,7 +58,7 @@ tokens, and spend them on pointers rather than content.
       ... 40 more
 
     not listed: 212 closed records older than 12h. They are on disk,
-    unmoved — grep memory/ finds any of them by name or content.
+    unmoved — grep .rouse/ finds any of them by name or content.
 
 ## the six things it must contain
 

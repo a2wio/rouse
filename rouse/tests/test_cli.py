@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from rouse import cli  # noqa: E402
 from rouse.addons import scaffold  # noqa: E402
-from rouse.core import context, files, layout, levels, pack  # noqa: E402
+from rouse.core import context, files, home, layout, levels, pack  # noqa: E402
 
 
 class Skeleton(unittest.TestCase):
@@ -32,14 +32,14 @@ class Skeleton(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.dir)
         with contextlib.redirect_stdout(io.StringIO()):
             cli.main(["init", str(self.dir)])
-        self.memory = self.dir / "memory"
+        self.memory = self.dir / home.LOCAL
 
     def test_it_ships_inside_the_package(self):
         """`pip install` takes the package and nothing beside it. A
         skeleton one directory up is an install that works right up until
         the first `rouse init`, on somebody else's machine."""
         self.assertEqual(scaffold.SKELETON.parent.name, "rouse")
-        self.assertTrue((scaffold.SKELETON / "memory"
+        self.assertTrue((scaffold.SKELETON / "tree"
                          / layout.INSTRUCTIONS).is_file())
 
     def test_it_draws_both_shapes_on_the_first_run(self):

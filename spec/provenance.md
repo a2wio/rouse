@@ -84,7 +84,7 @@ Whatever wraps your agent upgrades this with one call, outside the
 model's reach, after the turn:
 
     rouse stamp --origin untrusted --turn 20260314-091200-a1b2c3 \
-        $(git diff --name-only -- memory/)
+        $(git diff --name-only -- .rouse/)
 
 A shell hook, a wrapper script, a CI step — anything the model cannot
 invoke with an argument of its choosing. If the model can call it with

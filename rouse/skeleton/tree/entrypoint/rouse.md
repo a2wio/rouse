@@ -5,7 +5,7 @@ your work is scheduled, tracked and finished. A file here can come find
 you later.
 
 Read this before writing anything in here. Where "here" is on disk —
-`./memory` in a project, `~/.rouse` otherwise — is the one thing this
+`./.rouse` in a project, `~/.rouse` otherwise — is the one thing this
 file doesn't decide; whatever pointed you at it already knows.
 
 ## two kinds of thing in here
