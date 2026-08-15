@@ -121,6 +121,47 @@ and the pre-first-turn context filler instructions into your $HOME/.{agent-of-ch
 echo "Your memory lives in `.rouse/`. Read `.rouse/entrypoint/rouse.md` before using it > ~/.{agent-of-choice}/{FILLER}.md
 ```
 
+## Plugins
+
+Everything above is markdown and nothing else, which is what makes a tree
+portable. A plugin is the one door out of that, and it is **a skill plus
+the tool that skill runs**:
+
+    rouse/plugins/neon/
+      plugin.md                the settings it needs, and what it is
+      skills/
+        claude-code/SKILL.md   the instructions, in that CLI's shape
+        codex/SKILL.md
+      tool/                    the code those instructions tell it to run
+
+Installing one lays the SKILL.md down where that agent CLI already looks
+for skills — `.claude/skills/`, `.codex/skills/`, beside the tree — so
+the model finds it the way it finds every other skill on the box. What
+the skill tells it to run is `rouse <name> …`, which is the tool.
+
+    rouse plugin                                   # what's here, what's on
+    rouse plugin add neon project=<neon project>
+    rouse plugin remove neon
+
+It is on in a tree when `entrypoint/plugins/<name>.md` is there, off when
+it isn't, and that file's header is both its settings and the record of
+which skills the install wrote — which is how `remove` takes back exactly
+what `add` put down.
+
+The first plugin is neon: your memory tree mirrored into postgres, so
+recall can be a query instead of a grep.
+
+    rouse neon init && rouse neon sync
+    rouse neon recall "that thing about annotations"
+
+Sync is one way. The files are still the memory; the database is a copy
+you can search, a row that disagrees with a file is wrong, and losing the
+database costs a re-sync. It shells out to `neonctl` and `psql` — there
+are still no python dependencies, and there won't be.
+
+See `spec/plugins.md`, including what a neon branch does and does not
+fork.
+
 ## Closing
 
 `core/` is the whole of what rouse promises: an agent that only gets a

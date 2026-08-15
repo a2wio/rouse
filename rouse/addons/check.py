@@ -17,6 +17,7 @@ editor wants to call.
 import time
 from pathlib import Path
 
+from .. import plugins
 from ..core import context, files, layout, levels, pack, probes
 
 # everything a record header carries and a context module has no use
@@ -51,16 +52,17 @@ def lint(memory: Path) -> tuple[list[str], list[str]]:
         errors.append(f"{rel(path)}: a second record file in the same "
                       "directory — one record, one directory")
 
-    warnings += _context(memory)
+    warnings += _context(memory) + _plugins(memory)
 
     # the flat-layout mistake: a record written as `<slug>.md` instead of
     # `<slug>/<type>.md`. An .md beside a record file is an asset and
     # fine; an .md in a directory that is nobody's record is a lost file.
     homes = {r.dir for r in all_records}
     # flat by design, and not this rule's business: the two context
-    # layers (`_context` above has already had its say) and the
-    # instruction file
-    flat = {memory / layout.BELIEFS, memory / layout.MOTIVATIONS}
+    # layers (`_context` above has already had its say), the plugins
+    # (`_plugins` has), and the instruction file
+    flat = {memory / layout.BELIEFS, memory / layout.MOTIVATIONS,
+            memory / layout.PLUGINS}
     for root in (layout.ENTRYPOINT, layout.REMINDERS, layout.BACKLOG):
         for path in sorted((memory / root).rglob("*.md")):
             if path.stem in layout.TYPES or path.parent in homes:
@@ -201,6 +203,37 @@ def _context(memory: Path) -> list[str]:
         warnings.append(f"context: {size} characters over {CONTEXT_BUDGET} "
                         f"({by_type}) — every session pays for all of it. If "
                         "everything is a belief, nothing is")
+    return warnings
+
+
+def _plugins(memory: Path) -> list[str]:
+    """Lint what the tree has turned on.
+
+    All three findings are the same failure from a different side: a
+    plugin that will do nothing, and nothing saying so. An unfilled
+    `project:` fails at the first command, a plugin this install doesn't
+    ship fails at every command, and a skill that has been deleted since
+    fails at neither — the model simply never hears the plugin is there.
+    None of them fail at session start, which is when somebody is reading.
+    """
+    warnings = []
+    for name in plugins.enabled(memory):
+        where = f"{layout.PLUGINS}/{name}.md"
+        if name not in plugins.available():
+            warnings.append(f"{where}: this tree has {name} on and this "
+                            "install doesn't ship it — the instructions are "
+                            "here, the code isn't")
+            continue
+        if blank := plugins.blanks(memory, name):
+            warnings.append(f"{where}: nothing in {', '.join(blank)} — "
+                            "the plugin is on and cannot connect")
+        if gone := [at for at in plugins.recorded(memory, name)
+                    if not (at / "SKILL.md").is_file()]:
+            warnings.append(f"{where}: the skill is gone from "
+                            + ", ".join(str(at) for at in gone)
+                            + f" — the tool still runs, nothing tells the "
+                              f"agent it can. `rouse plugin remove {name}` "
+                              f"then add it again")
     return warnings
 
 

@@ -4,7 +4,7 @@
 >
 > In a way, a "source of truth" for the initial state of the repository. It will probably get cut in future development as specs are prone to degradation.
 
-Nine files. Read them in this order; each one assumes the ones above it.
+Ten files. Read them in this order; each one assumes the ones above it.
 
     home.md          where the tree is, and one tree per agent
     notes.md         durable memory — the frontmatter every file carries
@@ -15,6 +15,7 @@ Nine files. Read them in this order; each one assumes the ones above it.
     runs.md          tasks and reminders — the two things that actually run
     backlog.md       worth doing, not committed to
     pack.md          what the agent is handed at session start
+    plugins.md       the one door out of the filesystem, and its rules
 
 ## the rules underneath all of it
 

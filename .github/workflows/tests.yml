@@ -25,3 +25,16 @@ jobs:
           rouse init --wire
           grep -q '<!-- rouse -->' CLAUDE.md
           rouse check
+      # a plugin is a skill, and the install is a copy into the directory
+      # that agent reads. Both halves, and both halves back out again
+      - run: |
+          cd wired
+          mkdir -p .claude
+          rouse plugin add neon project=ci-project
+          test -f .claude/skills/rouse-neon/SKILL.md
+          grep -q 'project: ci-project' .rouse/entrypoint/plugins/neon.md
+          rouse pack | grep -q 'plugins: neon'
+          rouse check
+          rouse plugin remove neon
+          test ! -e .claude/skills/rouse-neon
+          test ! -e .rouse/entrypoint/plugins/neon.md

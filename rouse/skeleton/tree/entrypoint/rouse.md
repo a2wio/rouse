@@ -316,6 +316,23 @@ The price of the silence is that an item leaves in exactly two ways:
 becomes one — or **dropped out loud**. Never by quietly ceasing to
 exist.
 
+## plugins — if this tree has one on
+
+    entrypoint/plugins/<name>.md
+
+Something this agent can reach that isn't a file: a database to search
+your memory in, whatever else gets written later. You were told at the
+start of the session if one is on — one line, naming the file.
+
+**The instructions for it are a skill**, in whatever your CLI already
+uses for those, and it carries the commands and when to use them. The
+file above is what the plugin is set to: which project, which database.
+If your CLI has no skills, `rouse <name> --help` is the whole surface.
+
+The rule they all share: the files are still the memory. A plugin is a
+copy, a query, or a way out to something else, and when one disagrees
+with what is on disk, what is on disk is right.
+
 ## the two lines that matter most
 
 **Nothing evaporates.** Every commitment in here ends by being finished

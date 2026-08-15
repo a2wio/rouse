@@ -75,6 +75,13 @@ MOTIVATIONS = "entrypoint/beliefs/motivations"
 # the top of the record tree
 INTENTIONS = "entrypoint/beliefs/motivations/intentions"
 
+# the plugins this tree has turned on: one `<name>.md` each. Presence is
+# the switch and the header is the settings — see `rouse/plugins/`. It
+# lives in `entrypoint/` because it is an instruction file, like
+# `rouse.md` beside it: what this agent can reach, and where to read
+# about it.
+PLUGINS = "entrypoint/plugins"
+
 # the one subdirectory each context layer may hold: the next layer down.
 # Anything else in there is somebody nesting one ground truth inside
 # another, which is the lineage this shape does not have.

@@ -836,7 +836,7 @@ class Layering(unittest.TestCase):
     until the afternoon somebody needs one function from `scaffold`.
     """
 
-    def test_core_imports_nothing_from_addons_or_cli(self):
+    def test_core_imports_nothing_from_addons_cli_or_plugins(self):
         for path in sorted(Path(pack.__file__).parent.glob("*.py")):
             for node in ast.walk(ast.parse(path.read_text())):
                 named = []
@@ -848,7 +848,12 @@ class Layering(unittest.TestCase):
                 elif isinstance(node, ast.Import):
                     named = [a.name for a in node.names]
                 for name in named:
-                    outward = set(name.split(".")) & {"addons", "cli"}
+                    # `plugins` is in here for the reason the other two
+                    # are, and one more: a plugin talks to the network,
+                    # and core reaching one would put a database in the
+                    # middle of `pack`
+                    outward = set(name.split(".")) & {"addons", "cli",
+                                                      "plugins"}
                     self.assertFalse(outward, f"{path.name} imports {name}")
 
 

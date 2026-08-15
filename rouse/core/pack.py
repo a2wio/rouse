@@ -53,7 +53,7 @@ def render(memory: Path, *, budget_ms: int = probes.BUDGET_MS,
 
     out += (_due(records, now)
             + context.render(memory, query=query, now=now)
-            + _ladder(records) + _notes(memory, now))
+            + _plugins(memory) + _ladder(records) + _notes(memory, now))
     if records.broken:
         out.append("")
         out.append("no header, so nothing can track these: "
@@ -76,6 +76,31 @@ def _due(records: levels.Records, now: float) -> list[str]:
                 out.append(f"    {field}: {value}")
                 break
     return out + [""]
+
+
+def _plugins(memory: Path) -> list[str]:
+    """What this tree can reach that isn't a file, as a pointer.
+
+    A glob, not an import: whether a plugin is on is a fact about the
+    tree, so `core` can print it without knowing `rouse/plugins/` exists —
+    the same reason it can print the notes index without knowing what a
+    note says.
+
+    The agent's own CLI has the skill and will surface it; this line is
+    for the session that is reading the pack and nothing else, and it is a
+    pointer rather than a body because the instructions are two hundred
+    words about commands most sessions never run.
+    """
+    root = Path(memory) / layout.PLUGINS
+    found = sorted(path.stem for path in root.glob("*.md")) if root.is_dir() \
+        else []
+    if not found:
+        return []
+    # the same rule the ladder line learned: never a name without a route
+    route = (f"{layout.PLUGINS}/{found[0]}.md" if len(found) == 1
+             else f"{layout.PLUGINS}/<name>.md")
+    return [f"plugins: {', '.join(found)} — the skill for one is your "
+            f"agent's; {route} is what it is set to", ""]
 
 
 def _ladder(records: levels.Records) -> list[str]:
