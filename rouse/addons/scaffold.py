@@ -72,7 +72,7 @@ def lay(target: Path) -> None:
     """The skeleton, into a tree that isn't there yet. Never over one
     that is — the caller checks, because the caller is the one with
     somewhere to say so."""
-    shutil.copytree(SKELETON / "memory", target)
+    shutil.copytree(SKELETON / "tree", target)
 
 
 def blanks(path: Path) -> list[str]:

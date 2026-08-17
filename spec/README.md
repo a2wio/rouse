@@ -4,7 +4,7 @@
 >
 > In a way, a "source of truth" for the initial state of the repository. It will probably get cut in future development as specs are prone to degradation.
 
-Nine files. Read them in this order; each one assumes the ones above it.
+Ten files. Read them in this order; each one assumes the ones above it.
 
     home.md          where the tree is, and one tree per agent
     notes.md         durable memory — the frontmatter every file carries
@@ -15,12 +15,13 @@ Nine files. Read them in this order; each one assumes the ones above it.
     runs.md          tasks and reminders — the two things that actually run
     backlog.md       worth doing, not committed to
     pack.md          what the agent is handed at session start
+    plugins.md       the one door out of the filesystem, and its rules
 
 ## the rules underneath all of it
 
 **Context is flat; work is nested.**
 
-    memory/
+    .rouse/
       persona.md         how you talk. Optional, one per tree, injected
       entrypoint/
         rouse.md
@@ -75,7 +76,7 @@ invented to fill the space. A rule that is only sometimes wanted is worth
 having only if not wanting it is silent.
 
 **One tree per agent, and it is found, not passed.** `--memory`, then
-`$ROUSE_HOME`, then `./memory`, then `~/.rouse`. Two agents sharing a
+`$ROUSE_HOME`, then `./.rouse`, then `~/.rouse`. Two agents sharing a
 tree read each other's beliefs out of the same pack; see `home.md`.
 
 **One thing per record.** A record is the unit of everything: of recall,
@@ -134,7 +135,7 @@ instead.
 Five things, and nothing else is required:
 
 0. **Find the tree in the order above** — `--memory`, `$ROUSE_HOME`,
-   `./memory`, `~/.rouse` — and never let two agents onto one. An
+   `./.rouse`, `~/.rouse` — and never let two agents onto one. An
    implementation that invents its own order is one an existing memory
    can't be pointed at; see `home.md`.
 1. **Inject the context layers.** `persona.md` if there is one, then every

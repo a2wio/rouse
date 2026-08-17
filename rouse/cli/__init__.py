@@ -10,20 +10,28 @@
     rouse tree            the context layers and the records, as they sit
     rouse check           lint the memory tree
     rouse stamp           write provenance — for a wrapper, not the model
+    rouse plugin          what this install ships, and what this tree uses
+    rouse <plugin> …      run one — `rouse neon recall "…"`
 
 Every verb but `init` and `stamp` finds the tree the same way: --memory,
-then $ROUSE_HOME, then ./memory, then ~/.rouse. See rouse/core/home.py.
+then $ROUSE_HOME, then ./.rouse, then ~/.rouse. See rouse/core/home.py.
 
 This file is the argument parser and the table below it, and nothing
 else. Every verb is one call into `core/` or `addons/`, so what a flag
 is named and what a verb does are two things you can change without
 reading each other.
+
+A plugin's own verbs are the one thing not in that table, and they are
+dispatched before the parser runs: a plugin owns its flags, and putting
+them here would mean importing every plugin on every run to ask what they
+are called.
 """
 
 import argparse
 import sys
 from pathlib import Path
 
+from .. import plugins
 from ..addons import wire
 from ..core import home, layout, probes
 from . import install, verbs
@@ -43,6 +51,7 @@ VERBS = {
     "promote": verbs.cmd_promote,
     "sweep": verbs.cmd_sweep,
     "stamp": verbs.cmd_stamp,
+    "plugin": verbs.cmd_plugin,
 }
 
 # the two that don't read an existing tree: `init` makes one, `stamp`
@@ -51,6 +60,13 @@ ROOTLESS = ("init", "stamp")
 
 
 def main(argv=None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    # `rouse neon sync` — the rest of the line belongs to the plugin,
+    # including --memory, which it resolves the way everything else does.
+    # Checked against what is installed rather than what this tree has on,
+    # so a plugin that isn't on says so in its own words.
+    if argv and argv[0] in plugins.available():
+        return plugins.run(argv[0], argv[1:])
     args = parser().parse_args(argv)
     if args.cmd not in ROOTLESS:
         args.memory = home.resolve(args.memory)
@@ -108,6 +124,22 @@ def parser() -> argparse.ArgumentParser:
                                    "or a path inside the memory directory. "
                                    "Not for a persona, a belief or a "
                                    "motivation — those sit under nothing")
+
+    p = sub.add_parser("plugin", help="what this install ships, and what "
+                                      "this tree has on", parents=[common])
+    p.add_argument("action", nargs="?", choices=("add", "remove"),
+                   help="`add` lays the skill down where your agent finds "
+                        "skills and turns the plugin on in this tree; "
+                        "`remove` takes both back out")
+    p.add_argument("name", nargs="?", help="which plugin")
+    p.add_argument("settings", nargs="*", metavar="key=value",
+                   help="written straight into the header of the copy in "
+                        "the tree — `project=…`. Fields left out stay blank")
+    p.add_argument("--agent", action="append", metavar="NAME",
+                   help=f"which agent cli the skill is for "
+                        f"({', '.join(plugins.AGENTS)}). Repeatable. With "
+                        "none of these, every agent already on this box "
+                        "that the plugin ships a skill for")
 
     p = sub.add_parser("promote", help="a backlog item becomes an intention",
                        parents=[common])

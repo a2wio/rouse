@@ -1,6 +1,6 @@
 # the persona — how it talks, and why most trees haven't got one
 
-    memory/persona.md
+    .rouse/persona.md
 
 One file, at the root, above both halves. It says how this agent talks:
 register, length, what it sounds like and what it never sounds like. It
@@ -73,7 +73,7 @@ concise" and pay for it forever.
 
 ## the skeleton does not ship one
 
-Every other example in `rouse/skeleton/memory/` is prefixed `example-`, and
+Every other example in `rouse/skeleton/tree/` is prefixed `example-`, and
 that prefix is what makes it safe: `rouse.md` can say "nothing in them is
 something you believe — never act on one", and a reader can see which
 files it means.

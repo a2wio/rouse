@@ -28,13 +28,18 @@ Homepage = "https://github.com/a2wio/rouse"
 rouse = "rouse.cli:main"
 
 [tool.setuptools]
-packages = ["rouse", "rouse.core", "rouse.addons", "rouse.cli", "rouse.tests"]
+packages = ["rouse", "rouse.core", "rouse.addons", "rouse.cli",
+            "rouse.plugins", "rouse.plugins.neon", "rouse.plugins.neon.tool",
+            "rouse.tests"]
 
 [tool.setuptools.dynamic]
 version = { attr = "rouse.__version__" }
 
 # the skeleton is data, not code, and it has to be in the wheel: `rouse
 # init` with nothing to copy is the install working right up until the
-# first command
+# first command. A plugin's manifest, its skills and its sql are the same
+# kind of thing — the skill IS how a model finds out the plugin is there,
+# so a wheel without it ships code nothing can enable
 [tool.setuptools.package-data]
-rouse = ["skeleton/**/*"]
+rouse = ["skeleton/**/*", "plugins/*/plugin.md", "plugins/*/skills/**/*",
+         "plugins/*/tool/*.sql"]

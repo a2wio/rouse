@@ -10,8 +10,14 @@ So there is one order, and every implementation uses it:
 
     1. --memory <dir>     explicit, and explicit always wins
     2. $ROUSE_HOME        this agent's tree, wherever it keeps it
-    3. ./memory           the project you are standing in
+    3. ./.rouse           the project you are standing in
     4. ~/.rouse           the global one
+
+Rungs 3 and 4 are the same name twice, on purpose: the tree is `.rouse`
+wherever it lives, so one word covers both and a path written down in an
+instruction file reads the same in a project and in a home directory. It
+is dotted because it belongs to the agent rather than to the project —
+beside `.git` and `.claude`, not in the middle of somebody's source.
 
 **`~/.rouse` is the standard entrypoint.** Any agent may assume it
 exists without being configured, and anything that lays a tree down for
@@ -60,8 +66,8 @@ it is the reason the context layers are cut into files at all.
 
 ## laying one down
 
-    rouse init              ./memory, in the project you're in
-    rouse init <dir>        <dir>/memory
+    rouse init              ./.rouse, in the project you're in
+    rouse init <dir>        <dir>/.rouse
     rouse init --global     ~/.rouse
 
 Both modes give the tree a git repository of its own when it hasn't got

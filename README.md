@@ -64,16 +64,16 @@ Then open a session and ask it what it is carrying to verify if it loaded rouse 
 
 **Structure-only**
 
-Copy `rouse/skeleton/memory/` in your .{agent}/memory.
+Copy `rouse/skeleton/tree/` in as `.rouse/`.
 
 ```
-cp -r /path/to/rouse/skeleton/memory ~/path/to/project/memory
+cp -r /path/to/rouse/skeleton/tree ~/path/to/project/.rouse
 ```
 
 Then add one line in whatever your agent already reads (CLAUDE.md, AGENTS.md, a system prompt):
 
 ```
-echo "Your memory lives in `memory/`. Read `memory/entrypoint/rouse.md` before using it > /path/to/project/{AGENTS|CLAUDE|WHATEVER}.md
+echo "Your memory lives in `.rouse/`. Read `.rouse/entrypoint/rouse.md` before using it > /path/to/project/{AGENTS|CLAUDE|WHATEVER}.md
 ```
 
 **Clocked memories on session start (`rouse pack`)**
@@ -82,7 +82,7 @@ echo "Your memory lives in `memory/`. Read `memory/entrypoint/rouse.md` before u
 
 The following is the manual version of what `rouse init --wire` does.
 
-    rouse pack >> .agent/context.md            # ./memory or ~/.rouse
+    rouse pack >> .agent/context.md            # ./.rouse or ~/.rouse
     ROUSE_HOME=~/.rouse-oncall rouse pack      # a named agent's
     rouse pack --query "$PROMPT"               # thin the signals
 
@@ -112,14 +112,55 @@ Since the nature of agent memory systems is declerative (hence markdown), rouse 
 If you want to make Rouse your default memory system, you can just add the rouse.md + template into your $HOME/.{agent-of-choice} directory:
 
 ```
-cp -r rouse/skeleton/memory ~/.{agent-of-choice}/
+cp -r rouse/skeleton/tree ~/.{agent-of-choice}/.rouse
 ```
 
 and the pre-first-turn context filler instructions into your $HOME/.{agent-of-choice}/{FILLER.md}:
 
 ```
-echo "Your memory lives in `memory/`. Read `memory/entrypoint/rouse.md` before using it > ~/.{agent-of-choice}/{FILLER}.md
+echo "Your memory lives in `.rouse/`. Read `.rouse/entrypoint/rouse.md` before using it > ~/.{agent-of-choice}/{FILLER}.md
 ```
+
+## Plugins
+
+Everything above is markdown and nothing else, which is what makes a tree
+portable. A plugin is the one door out of that, and it is **a skill plus
+the tool that skill runs**:
+
+    rouse/plugins/neon/
+      plugin.md                the settings it needs, and what it is
+      skills/
+        claude-code/SKILL.md   the instructions, in that CLI's shape
+        codex/SKILL.md
+      tool/                    the code those instructions tell it to run
+
+Installing one lays the SKILL.md down where that agent CLI already looks
+for skills — `.claude/skills/`, `.codex/skills/`, beside the tree — so
+the model finds it the way it finds every other skill on the box. What
+the skill tells it to run is `rouse <name> …`, which is the tool.
+
+    rouse plugin                                   # what's here, what's on
+    rouse plugin add neon project=<neon project>
+    rouse plugin remove neon
+
+It is on in a tree when `entrypoint/plugins/<name>.md` is there, off when
+it isn't, and that file's header is both its settings and the record of
+which skills the install wrote — which is how `remove` takes back exactly
+what `add` put down.
+
+The first plugin is neon: your memory tree mirrored into postgres, so
+recall can be a query instead of a grep.
+
+    rouse neon init && rouse neon sync
+    rouse neon recall "that thing about annotations"
+
+Sync is one way. The files are still the memory; the database is a copy
+you can search, a row that disagrees with a file is wrong, and losing the
+database costs a re-sync. It shells out to `neonctl` and `psql` — there
+are still no python dependencies, and there won't be.
+
+See `spec/plugins.md`, including what a neon branch does and does not
+fork.
 
 ## Closing
 
@@ -135,8 +176,8 @@ directory or run it out of a checkout, and every `rouse …` above becomes
 `python3 -m rouse …`.
 
     python3 -m rouse init ./scratch
-    python3 -m rouse --memory ./scratch/memory tree
-    python3 -m rouse --memory ./scratch/memory check
+    python3 -m rouse --memory ./scratch/.rouse tree
+    python3 -m rouse --memory ./scratch/.rouse check
 
 Read `spec/README.md` next. It is short, and it is the actual product;
 the code is there to prove the conventions are mechanical, not to be the

@@ -3,6 +3,9 @@ __pycache__/
 *.rouse-tmp
 
 # the sweeper's own scratch: cached demand readings and undelivered wakes
+.scratch/
+
+# a tree laid down inside this checkout by hand
 .rouse/
 
 # `rouse init ./scratch`, which CI and the README both do
